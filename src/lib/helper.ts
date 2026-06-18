@@ -3,6 +3,7 @@ import AppError from '../errors/AppError';
 import { createToken } from '../utils/tokenGenerate';
 import config from '../config';
 import { IUser } from '../modules/user/user.interface';
+import bcrypt from 'bcrypt';
 
 export const validateUserStatus = (user: any) => {
   if (user.isSuspend) {
@@ -65,8 +66,6 @@ export const buildUserResponseRegister = (user: IUser) => ({
   role: user.role,
   image: user.image,
 });
-
-import bcrypt from 'bcrypt';
 
 export const generateOtp = async () => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
