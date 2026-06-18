@@ -7,7 +7,12 @@ import sendEmail from '../../utils/sendEmail';
 import { createToken, verifyToken } from '../../utils/tokenGenerate';
 import verificationCodeTemplate from '../../utils/verificationCodeTemplate';
 import { User } from '../user/user.model';
-import { buildUserResponse, generateTokens, validateUserStatus } from '../../lib/helper';
+import {
+  buildUserResponse,
+  generateOtp,
+  generateTokens,
+  validateUserStatus,
+} from '../../lib/helper';
 
 const login = async (payload: { email: string; password: string }) => {
   const { email, password } = payload;
@@ -71,9 +76,7 @@ const forgotPassword = async (email: string) => {
   if (!isExistingUser)
     throw new AppError('No account found with the provided credentials.', StatusCodes.NOT_FOUND);
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const hashedOtp = await bcrypt.hash(otp, 10);
-  const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+  const { otp, hashedOtp, otpExpires } = await generateOtp();
 
   await User.findByIdAndUpdate(
     isExistingUser._id,
@@ -90,17 +93,8 @@ const forgotPassword = async (email: string) => {
     html: verificationCodeTemplate(otp),
   });
 
-  const JwtToken = {
-    userId: isExistingUser._id,
-    email: isExistingUser.email,
-    role: isExistingUser.role,
-  };
-
-  const accessToken = createToken(
-    JwtToken,
-    config.JWT_SECRET as string,
-    config.JWT_EXPIRES_IN as string,
-  );
+  const token = generateTokens(isExistingUser);
+  const { accessToken } = token;
 
   return { accessToken };
 };
@@ -110,9 +104,7 @@ const resendForgotOtpCode = async (email: string) => {
   if (!existingUser)
     throw new AppError('No account found with the provided credentials.', StatusCodes.NOT_FOUND);
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const hashedOtp = await bcrypt.hash(otp, 10);
-  const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+  const { otp, hashedOtp, otpExpires } = await generateOtp();
 
   await User.findOneAndUpdate(
     { email },
@@ -160,17 +152,8 @@ const verifyOtp = async (email: string, otp: string) => {
     { new: true },
   );
 
-  const JwtToken = {
-    userId: isExistingUser._id,
-    email: isExistingUser.email,
-    role: isExistingUser.role,
-  };
-
-  const accessToken = createToken(
-    JwtToken,
-    config.JWT_SECRET as string,
-    config.JWT_EXPIRES_IN as string,
-  );
+  const token = generateTokens(isExistingUser);
+  const { accessToken } = token;
 
   return { accessToken };
 };

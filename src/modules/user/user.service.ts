@@ -99,9 +99,7 @@ const resendOtpCode = async (email: string) => {
     throw new AppError('User already verified', StatusCodes.CONFLICT);
   }
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const hashedOtp = await bcrypt.hash(otp, 10);
-  const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+  const { otp, hashedOtp, otpExpires } = await generateOtp();
 
   const result = await User.findOneAndUpdate(
     { email },
