@@ -4,6 +4,7 @@ import { User } from '../user/user.model';
 import { IProduct } from './product.interface';
 import { deleteFromCloudinary, uploadToCloudinary } from '../../utils/cloudinary';
 import Product from './product.model';
+import Category from '../category/category.model';
 
 const createProduct = async (
   payload: Partial<IProduct>,
@@ -13,6 +14,11 @@ const createProduct = async (
   const user = await User.findOne({ email });
   if (!user) {
     throw new AppError('Your account is not found', StatusCodes.FORBIDDEN);
+  }
+
+  const category = await Category.findById(payload.categoryId);
+  if (!category) {
+    throw new AppError('Category not found', StatusCodes.NOT_FOUND);
   }
 
   if (!files?.length) {
@@ -32,6 +38,7 @@ const createProduct = async (
 
   const productData = {
     ...payload,
+    categoryId: payload.categoryId,
     images: uploadedImages,
     inventoryStatus: 'available',
     totalReview: 0,
@@ -117,6 +124,7 @@ const getAllProducts = async (query: Record<string, unknown>) => {
   }
 
   const products = await Product.find(filter)
+    .populate('categoryId')
     .sort(sort)
     .skip(skip)
     .limit(limitNumber)
@@ -136,7 +144,10 @@ const getAllProducts = async (query: Record<string, unknown>) => {
 };
 
 const getProductDetails = async (id: string) => {
-  const result = await Product.findById(id);
+  const result = await Product.findById(id).populate('categoryId');
+  if (!result) {
+    throw new AppError('Product not found', StatusCodes.NOT_FOUND);
+  }
   return result;
 };
 
@@ -149,6 +160,11 @@ const updateProduct = async (
   const user = await User.isUserExistByEmail(email);
   if (!user) {
     throw new AppError('User not found', StatusCodes.FORBIDDEN);
+  }
+
+  const category = await Category.findById(payload.categoryId);
+  if (!category) {
+    throw new AppError('Category not found', StatusCodes.NOT_FOUND);
   }
 
   const product = await Product.findById(id);

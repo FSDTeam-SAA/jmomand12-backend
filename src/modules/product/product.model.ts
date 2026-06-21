@@ -34,7 +34,9 @@ const productSchema = new Schema<IProduct>(
     },
 
     categoryId: {
-      type: Schema.ObjectId,
+      type: Schema.Types.ObjectId,
+      ref: 'Category',
+      required: true,
     },
 
     condition: {
