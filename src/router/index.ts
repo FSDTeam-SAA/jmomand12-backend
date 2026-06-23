@@ -43,52 +43,8 @@ const moduleRoutes = [
     route: productRouter,
   },
   {
-    path: '/auctions',
-    route: auctionRouter,
-  },
-  {
-    path: '/auction',
-    route: auctionRouter,
-  },
-  {
-    path: '/payments',
-    route: paymentRouter,
-  },
-  {
-    path: '/payment',
-    route: paymentRouter,
-  },
-  {
-    path: '/invoices',
-    route: invoiceRouter,
-  },
-  {
-    path: '/invoice',
-    route: invoiceRouter,
-  },
-  {
-    path: '/pickups',
-    route: pickupRouter,
-  },
-  {
-    path: '/pickup',
-    route: pickupRouter,
-  },
-  {
-    path: '/notifications',
-    route: notificationRouter,
-  },
-  {
-    path: '/notification',
-    route: notificationRouter,
-  },
-  {
-    path: '/settings',
-    route: settingsRouter,
-  },
-  {
-    path: '/reports',
-    route: reportRouter,
+    path: '/category',
+    route: categoryRouter,
   },
 ];
 
