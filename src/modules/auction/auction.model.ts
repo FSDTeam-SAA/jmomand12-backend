@@ -1,15 +1,53 @@
 import { Schema, model } from 'mongoose';
-import { IAuction } from './auction.interface';
+import { AuctionStatus, IAuction, IPickUpSchedule } from './auction.interface';
 
-const auctionSchema = new Schema<IAuction>(
+const PickUpScheduleSchema = new Schema<IPickUpSchedule>(
   {
-    product: {
-      type: Schema.Types.ObjectId,
-      ref: 'Product',
+    startDate: {
+      type: Date,
+      required: true,
+    },
+    endDate: {
+      type: Date,
+      required: true,
+    },
+    dailyStartTime: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    dailyEndTime: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    durationInDays: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+  },
+  { _id: false },
+);
+
+// ২. Main Auction Schema
+const AuctionSchema = new Schema<IAuction>(
+  {
+    auctionId: {
+      type: String,
       required: true,
       unique: true,
       index: true,
+      trim: true,
     },
+
+    products: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Product',
+        required: true,
+      },
+    ],
     title: {
       type: String,
       required: true,
@@ -19,16 +57,22 @@ const auctionSchema = new Schema<IAuction>(
       type: String,
       trim: true,
     },
+
+    // Auction Schedule
     startsAt: {
       type: Date,
       required: true,
-      index: true,
     },
     endsAt: {
       type: Date,
       required: true,
-      index: true,
     },
+    durationInDays: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+
     startingBid: {
       type: Number,
       required: true,
@@ -38,7 +82,6 @@ const auctionSchema = new Schema<IAuction>(
       type: Number,
       required: true,
       min: 1,
-      default: 1,
     },
     reservePrice: {
       type: Number,
@@ -48,7 +91,7 @@ const auctionSchema = new Schema<IAuction>(
     status: {
       type: String,
       enum: [
-        'scheduled',
+        'upcoming',
         'active',
         'ended',
         'payment_pending',
@@ -56,10 +99,17 @@ const auctionSchema = new Schema<IAuction>(
         'sold',
         'unsold',
         'cancelled',
-      ],
-      default: 'scheduled',
-      index: true,
+      ] as AuctionStatus[],
+      default: 'upcoming',
     },
+
+    // PickUp Schedule Sub-document
+    pickupSchedule: {
+      type: PickUpScheduleSchema,
+      required: false,
+    },
+
+    // Bidding Analytics
     highestBid: {
       bidder: {
         type: Schema.Types.ObjectId,
@@ -68,7 +118,6 @@ const auctionSchema = new Schema<IAuction>(
       amount: {
         type: Number,
         default: 0,
-        min: 0,
       },
       bid: {
         type: Schema.Types.ObjectId,
@@ -82,8 +131,13 @@ const auctionSchema = new Schema<IAuction>(
       type: Schema.Types.ObjectId,
       ref: 'User',
     },
-    closedAt: Date,
-    closeReason: String,
+    closedAt: {
+      type: Date,
+    },
+    closeReason: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,
@@ -91,7 +145,9 @@ const auctionSchema = new Schema<IAuction>(
   },
 );
 
-auctionSchema.index({ status: 1, startsAt: 1, endsAt: 1 });
+AuctionSchema.index({ status: 1, startsAt: 1, endsAt: 1 });
+AuctionSchema.index({ products: 1 });
 
-const Auction = model<IAuction>('Auction', auctionSchema);
+// ৪. Export Mongoose Model
+const Auction = model<IAuction>('Auction', AuctionSchema);
 export default Auction;

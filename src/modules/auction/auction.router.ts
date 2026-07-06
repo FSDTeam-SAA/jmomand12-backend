@@ -8,6 +8,7 @@ const router = Router();
 router.post('/', auth(USER_ROLE.ADMIN), auctionController.createAuction);
 router.get('/', auctionController.getAllAuctions);
 router.get('/all', auctionController.getAllAuctions);
+router.get('/active', auctionController.getActiveAuction);
 router.post('/process-due', auth(USER_ROLE.ADMIN), auctionController.closeDueAuctions);
 router.post('/close-due', auth(USER_ROLE.ADMIN), auctionController.closeDueAuctions);
 router.get('/:id', auctionController.getAuctionDetails);

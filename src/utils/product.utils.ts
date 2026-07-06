@@ -59,17 +59,24 @@ export const validateProductRowShape = (row: IBulkProductRow & { row: number }):
 /** Atomically reserves a contiguous block of N inventory IDs in one DB round-trip. */
 export const generateInventoryIdsBatch = async (count: number): Promise<string[]> => {
   if (count === 0) return [];
-  const year = new Date().getFullYear();
+
+  const now = new Date();
+
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = String(now.getFullYear()).slice(-2);
+
   const counter = await Counter.findOneAndUpdate(
-    { _id: 'inventoryId' },
+    { _id: `inventoryId-${month}-${year}` },
     { $inc: { seq: count } },
     { new: true, upsert: true },
   );
+
   const start = counter.seq - count + 1;
-  return Array.from(
-    { length: count },
-    (_, i) => `AUC-${year}-${String(start + i).padStart(4, '0')}`,
-  );
+
+  return Array.from({ length: count }, (_, i) => {
+    const serial = String(start + i).padStart(6, '0');
+    return `PRD-${serial}-${month}-${year}`;
+  });
 };
 
 /** Recursively searches for a file by exact name, returns first match. */
@@ -111,4 +118,19 @@ export const listImageFiles = (folderPath: string): string[] => {
 /** Best-effort recursive delete; never throws — cleanup should not crash the request. */
 export const safeCleanup = (targetPath: string): void => {
   fs.rm(targetPath, { recursive: true, force: true }, () => {});
+};
+
+export const generateAuctionId = async (): Promise<string> => {
+  const now = new Date();
+
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = String(now.getFullYear()).slice(-2);
+
+  const counter = await Counter.findOneAndUpdate(
+    { _id: `auctionId-${month}-${year}` },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true },
+  );
+
+  return `AUC-${String(counter.seq).padStart(6, '0')}-${month}-${year}`;
 };
