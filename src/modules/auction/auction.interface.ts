@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 
 export type AuctionStatus =
-  | 'scheduled'
+  | 'upcoming'
   | 'active'
   | 'ended'
   | 'payment_pending'
@@ -10,19 +10,33 @@ export type AuctionStatus =
   | 'unsold'
   | 'cancelled';
 
-
-  
+export interface IPickUpSchedule {
+  startDate: Date;
+  endDate: Date;
+  dailyStartTime: string;
+  dailyEndTime: string;
+  durationInDays: number;
+}
 
 export interface IAuction {
-  product: Types.ObjectId;
+  auctionId: string;
+  products: Types.ObjectId[];
   title: string;
   description?: string;
+
+  // Auction Schedule
   startsAt: Date;
   endsAt: Date;
+  durationInDays: number;
+
+  // Bidding Fields
   startingBid: number;
   bidIncrement: number;
   reservePrice: number;
   status: AuctionStatus;
+
+  pickupSchedule?: IPickUpSchedule;
+
   highestBid?: {
     bidder?: Types.ObjectId;
     amount: number;

@@ -28,7 +28,8 @@ const getAllAuctions = catchAsync(async (req, res) => {
 });
 
 const getAuctionDetails = catchAsync(async (req, res) => {
-  const result = await auctionService.getAuctionDetails(req.params.id as string);
+  const { id } = req.params;
+  const result = await auctionService.getAuctionDetails(id as string);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -55,7 +56,11 @@ const getAuctionBids = catchAsync(async (req, res) => {
 
 const placeBid = catchAsync(async (req, res) => {
   const { email } = req.user;
-  const result = await auctionService.placeBid(req.params.id as string, email, Number(req.body.amount));
+  const result = await auctionService.placeBid(
+    req.params.id as string,
+    email,
+    Number(req.body.amount),
+  );
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -87,6 +92,17 @@ const closeDueAuctions = catchAsync(async (_req, res) => {
   });
 });
 
+const getActiveAuction = catchAsync(async (_req, res) => {
+  const result = await auctionService.activateDueAuctions();
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Active auction fetched successfully',
+    data: result,
+  });
+});
+
 const auctionController = {
   createAuction,
   getAllAuctions,
@@ -95,6 +111,7 @@ const auctionController = {
   placeBid,
   closeAuction,
   closeDueAuctions,
+  getActiveAuction,
 };
 
 export default auctionController;

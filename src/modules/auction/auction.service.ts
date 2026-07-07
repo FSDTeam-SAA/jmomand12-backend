@@ -7,98 +7,176 @@ import Bid from '../bid/bid.model';
 import paymentService from '../payment/payment.service';
 import invoiceService from '../invoice/invoice.service';
 import Auction from './auction.model';
-import { IAuction } from './auction.interface';
+import { AuctionStatus, IAuction } from './auction.interface';
+import { generateAuctionId } from '../../utils/product.utils';
 
-const resolveAuctionStatus = (startsAt: Date, endsAt: Date) => {
+const resolveAuctionStatus = (startsAt: Date, endsAt: Date): AuctionStatus => {
   const now = new Date();
-  if (now < startsAt) return 'scheduled';
-  if (now >= startsAt && now < endsAt) return 'active';
+
+  if (now < startsAt) return 'upcoming';
+  if (now >= startsAt && now < endsAt) {
+    return 'active';
+  }
+
   return 'ended';
 };
 
-const createAuction = async (payload: Partial<IAuction> & { product: string }, email: string) => {
+const createAuction = async (payload: any, email: string) => {
   const admin = await User.findOne({ email });
+
   if (!admin) {
     throw new AppError('Admin account not found', StatusCodes.FORBIDDEN);
   }
 
-  const product = await Product.findById(payload.product);
-  if (!product) {
-    throw new AppError('Product not found', StatusCodes.NOT_FOUND);
+  const products = await Product.find({
+    _id: { $in: payload.products },
+  });
+
+  if (!products.length) {
+    throw new AppError('Products not found', StatusCodes.NOT_FOUND);
   }
 
-  if (product.inventoryStatus !== 'available' && product.inventoryStatus !== 'unsold') {
-    throw new AppError('Product is not available for auction', StatusCodes.BAD_REQUEST);
+  for (const product of products) {
+    if (product.inventoryStatus !== 'available' && product.inventoryStatus !== 'unsold') {
+      throw new AppError(`${product.title} is not available for auction`, StatusCodes.BAD_REQUEST);
+    }
   }
 
-  const startsAt = new Date(payload.startsAt as Date);
-  const endsAt = new Date(payload.endsAt as Date);
-  if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || startsAt >= endsAt) {
-    throw new AppError('Auction start time must be before end time', StatusCodes.BAD_REQUEST);
-  }
+  const startsAt = new Date(
+    `${payload.auctionSchedule.startDate}T${payload.auctionSchedule.startTime}:00`,
+  );
+
+  const endsAt = new Date(startsAt);
+
+  endsAt.setDate(endsAt.getDate() + payload.auctionSchedule.durationInDays);
 
   const status = resolveAuctionStatus(startsAt, endsAt);
+
   const auction = await Auction.create({
-    product: product._id,
-    title: payload.title || product.title,
-    description: payload.description || product.description,
+    auctionId: await generateAuctionId(),
+    products: products.map((p) => p._id),
+    title: payload.title,
+    description: payload.description,
     startsAt,
     endsAt,
-    startingBid: payload.startingBid ?? 1,
-    bidIncrement: payload.bidIncrement ?? 1,
-    reservePrice: payload.reservePrice ?? product.reservePrice,
+    durationInDays: payload.auctionSchedule.durationInDays,
+    startingBid: payload.startingBid,
+    bidIncrement: payload.bidIncrement,
+    reservePrice: payload.reservePrice,
     status,
+    pickupSchedule: payload.pickupSchedule,
     highestBid: {
       amount: 0,
     },
   });
 
-  product.inventoryStatus = status === 'active' ? 'auction_active' : 'available';
-  await product.save();
+  await Product.updateMany(
+    {
+      _id: {
+        $in: products.map((p) => p._id),
+      },
+    },
+    {
+      inventoryStatus: status === 'active' ? 'auction_active' : 'available',
+    },
+  );
 
-  return auction.populate('product');
+  return auction.populate('products');
 };
 
 const activateDueAuctions = async () => {
   const now = new Date();
+
   const auctions = await Auction.find({
-    status: 'scheduled',
+    status: 'upcoming',
     startsAt: { $lte: now },
     endsAt: { $gt: now },
   });
 
-  await Promise.all(
-    auctions.map(async (auction) => {
-      auction.status = 'active';
-      await auction.save();
-      await Product.findByIdAndUpdate(auction.product, { inventoryStatus: 'auction_active' });
-    }),
-  );
+  if (auctions.length === 0) {
+    return {
+      success: false,
+      message: 'No auctions are ready to be activated.',
+      activatedCount: 0,
+    };
+  }
 
-  return auctions.length;
+  for (const auction of auctions) {
+    auction.status = 'active';
+    await auction.save();
+
+    await Product.updateMany(
+      {
+        _id: { $in: auction.products },
+      },
+      {
+        inventoryStatus: 'auction_active',
+      },
+    );
+  }
+
+  return {
+    success: true,
+    message: `${auctions.length} auction(s) activated successfully.`,
+    activatedCount: auctions.length,
+  };
 };
 
 const getAllAuctions = async (query: Record<string, unknown>) => {
-  const { status, page = 1, limit = 10 } = query;
+  const {
+    status,
+    searchTerm,
+    page = 1,
+    limit = 10,
+    sortBy = 'startsAt',
+    sortOrder = 'desc',
+  } = query;
+
   const filter: Record<string, unknown> = {};
 
+  // Status Filter
   if (status) {
     filter.status = status;
   }
 
+  // Search
+  if (searchTerm) {
+    filter.$or = [
+      {
+        auctionId: {
+          $regex: searchTerm,
+          $options: 'i',
+        },
+      },
+      {
+        title: {
+          $regex: searchTerm,
+          $options: 'i',
+        },
+      },
+    ];
+  }
+
   const pageNumber = Number(page);
   const limitNumber = Number(limit);
+
   const skip = (pageNumber - 1) * limitNumber;
 
-  const auctions = await Auction.find(filter)
-    .populate('product')
-    .populate('highestBid.bidder', 'firstName lastName email')
-    .populate('winner', 'firstName lastName email')
-    .sort({ startsAt: -1 })
-    .skip(skip)
-    .limit(limitNumber);
+  const sort: Record<string, 1 | -1> = {
+    [String(sortBy)]: sortOrder === 'asc' ? 1 : -1,
+  };
 
-  const total = await Auction.countDocuments(filter);
+  const [auctions, total] = await Promise.all([
+    Auction.find(filter)
+      .populate('products')
+      .populate('highestBid.bidder', 'firstName lastName email')
+      .populate('winner', 'firstName lastName email')
+      .sort(sort)
+      .skip(skip)
+      .limit(limitNumber),
+
+    Auction.countDocuments(filter),
+  ]);
 
   return {
     meta: {
@@ -113,9 +191,16 @@ const getAllAuctions = async (query: Record<string, unknown>) => {
 
 const getAuctionDetails = async (id: string) => {
   const auction = await Auction.findById(id)
-    .populate('product')
-    .populate('highestBid.bidder', 'firstName lastName email')
-    .populate('winner', 'firstName lastName email');
+    .populate('products')
+    .populate('highestBid.bidder', 'firstName lastName email profileImage')
+    .populate('winner', 'firstName lastName email profileImage')
+    .populate({
+      path: 'highestBid.bid',
+      populate: {
+        path: 'bidder',
+        select: 'firstName lastName email',
+      },
+    });
 
   if (!auction) {
     throw new AppError('Auction not found', StatusCodes.NOT_FOUND);
@@ -156,7 +241,8 @@ const placeBid = async (auctionId: string, email: string, amount: number) => {
   }
 
   const currentHighest = auction.highestBid?.amount || 0;
-  const minimumBid = currentHighest > 0 ? currentHighest + auction.bidIncrement : auction.startingBid;
+  const minimumBid =
+    currentHighest > 0 ? currentHighest + auction.bidIncrement : auction.startingBid;
   if (amount < minimumBid) {
     throw new AppError(`Bid must be at least ${minimumBid}`, StatusCodes.BAD_REQUEST);
   }
