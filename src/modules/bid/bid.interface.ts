@@ -1,10 +1,10 @@
 import { Types } from 'mongoose';
 
 export interface IBid {
-  auction: Types.ObjectId;
-  auctionProduct: Types.ObjectId;
-  product: Types.ObjectId;
-  bidder: Types.ObjectId;
+  auctionId: Types.ObjectId;
+  auctionProductId: Types.ObjectId;
+  productId: Types.ObjectId;
+  bidderId: Types.ObjectId;
   amount: number;
   isWinningBid: boolean;
   createdAt: Date;

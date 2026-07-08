@@ -3,28 +3,28 @@ import { IBid } from './bid.interface';
 
 const bidSchema = new Schema<IBid>(
   {
-    auction: {
+    auctionId: {
       type: Schema.Types.ObjectId,
       ref: 'Auction',
       required: true,
       index: true,
     },
 
-    auctionProduct: {
+    auctionProductId: {
       type: Schema.Types.ObjectId,
       ref: 'AuctionProduct',
       required: true,
       index: true,
     },
 
-    product: {
+    productId: {
       type: Schema.Types.ObjectId,
       ref: 'Product',
       required: true,
       index: true,
     },
 
-    bidder: {
+    bidderId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
@@ -52,9 +52,9 @@ const bidSchema = new Schema<IBid>(
 );
 
 // Useful indexes
-bidSchema.index({ auctionProduct: 1, amount: -1 });
-bidSchema.index({ auction: 1, bidder: 1 });
-bidSchema.index({ auctionProduct: 1, createdAt: -1 });
+bidSchema.index({ auctionProductId: 1, amount: -1 });
+bidSchema.index({ auctionId: 1, bidderId: 1 });
+bidSchema.index({ auctionProductId: 1, createdAt: -1 });
 
 const Bid = model<IBid>('Bid', bidSchema);
 export default Bid;
