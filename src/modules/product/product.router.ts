@@ -21,7 +21,6 @@ router.post(
 );
 
 router.get('/', productController.getAllProducts);
-router.get('/all', productController.getAllProducts);
 router.get(
   '/inventory-monitoring',
   auth(USER_ROLE.ADMIN),
@@ -30,12 +29,6 @@ router.get(
 router.get('/:id', productController.getProductDetails);
 router.patch(
   '/:id',
-  upload.array('images', 5),
-  auth(USER_ROLE.ADMIN),
-  productController.updateProduct,
-);
-router.put(
-  '/update/:id',
   upload.array('images', 5),
   auth(USER_ROLE.ADMIN),
   productController.updateProduct,

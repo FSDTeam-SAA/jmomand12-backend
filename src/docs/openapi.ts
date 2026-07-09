@@ -51,7 +51,10 @@ const openApiDocumentBase = {
     { name: 'Auth', description: 'Authentication, token refresh, OTP, and password management APIs.' },
     { name: 'Users', description: 'Customer registration, profile, email verification, and admin user management APIs.' },
     { name: 'Products', description: 'Inventory product, media upload, detail, update, delete, and monitoring APIs.' },
-    { name: 'Auctions', description: 'Auction scheduling, listing, bidding, closing, and bid history APIs.' },
+    { name: 'Categories', description: 'Product category CRUD APIs.' },
+    { name: 'Auctions', description: 'Auction scheduling, listing, and detail APIs.' },
+    { name: 'Auction Products', description: 'Products associated with a specific auction.' },
+    { name: 'Bids', description: 'Bid placement APIs.' },
     { name: 'Payments', description: 'Stripe saved-card setup, default payment method, and test-card helper APIs.' },
     { name: 'Invoices', description: 'Customer invoice, admin invoice, and pickup QR/code verification APIs.' },
     { name: 'Pickups', description: 'Pickup slot, ready invoice, appointment scheduling, and completion APIs.' },
@@ -130,7 +133,7 @@ const openApiDocumentBase = {
       post: {
         tags: ['Auth'],
         security: bearer,
-        summary: 'Resend password reset OTP',
+        summary: 'Resend forgot password OTP',
         responses: { 200: success('Password reset OTP resent successfully') },
       },
     },
@@ -164,10 +167,10 @@ const openApiDocumentBase = {
         responses: { 200: success('Password changed successfully') },
       },
     },
-    '/users': {
+    '/users/register': {
       post: {
         tags: ['Users'],
-        summary: 'Register a customer account',
+        summary: 'Register a new customer account',
         requestBody: {
           required: true,
           content: json({
@@ -189,18 +192,12 @@ const openApiDocumentBase = {
           ),
         },
       },
-      get: {
-        tags: ['Users'],
-        security: bearer,
-        summary: 'Admin: list users',
-        responses: { 200: success('Users retrieved successfully.') },
-      },
     },
     '/users/email-verifications': {
       post: {
         tags: ['Users'],
         security: bearer,
-        summary: 'Verify account email OTP',
+        summary: 'Verify account email with OTP',
         requestBody: { required: true, content: json({ otp: '123456' }) },
         responses: { 200: success('Email verified successfully. You can now log in.') },
       },
@@ -213,11 +210,19 @@ const openApiDocumentBase = {
         responses: { 200: success('OTP code sent successfully') },
       },
     },
+    '/users': {
+      get: {
+        tags: ['Users'],
+        security: bearer,
+        summary: 'Admin: list all users',
+        responses: { 200: success('Users retrieved successfully.') },
+      },
+    },
     '/users/me': {
       get: {
         tags: ['Users'],
         security: bearer,
-        summary: 'Get my profile',
+        summary: 'Get own profile',
         responses: {
           200: success('Your profile has been retrieved successfully.', {}, { update: '/api/v1/users/me' }),
         },
@@ -225,7 +230,7 @@ const openApiDocumentBase = {
       patch: {
         tags: ['Users'],
         security: bearer,
-        summary: 'Update my profile with optional image upload',
+        summary: 'Update own profile with optional image upload',
         requestBody: {
           required: false,
           content: {
@@ -249,7 +254,7 @@ const openApiDocumentBase = {
       get: {
         tags: ['Users'],
         security: bearer,
-        summary: 'Get primary admin ID',
+        summary: 'Get primary admin user ID',
         responses: { 200: success('Admin ID fetched successfully') },
       },
     },
@@ -257,7 +262,7 @@ const openApiDocumentBase = {
       get: {
         tags: ['Users'],
         security: bearer,
-        summary: 'Admin: get user details',
+        summary: 'Admin: get user details by ID',
         parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: success('User details retrieved successfully.') },
       },
@@ -266,25 +271,25 @@ const openApiDocumentBase = {
       patch: {
         tags: ['Users'],
         security: bearer,
-        summary: 'Admin: toggle user suspension',
+        summary: 'Admin: toggle user suspension status',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: success('User suspended successfully') },
+        responses: { 200: success('User suspension toggled successfully') },
       },
     },
     '/users/{id}/block': {
       patch: {
         tags: ['Users'],
         security: bearer,
-        summary: 'Admin: toggle user block',
+        summary: 'Admin: toggle user block status',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: success('User blocked successfully') },
+        responses: { 200: success('User block toggled successfully') },
       },
     },
     '/products': {
       post: {
         tags: ['Products'],
         security: bearer,
-        summary: 'Admin: create inventory product with Cloudinary images',
+        summary: 'Admin: create a new product with Cloudinary images',
         requestBody: {
           required: true,
           content: {
@@ -318,7 +323,7 @@ const openApiDocumentBase = {
       },
       get: {
         tags: ['Products'],
-        summary: 'List products with search/filter/pagination',
+        summary: 'List products with search, filter, and pagination',
         parameters: [
           { name: 'searchTerm', in: 'query', schema: { type: 'string' } },
           { name: 'category', in: 'query', schema: { type: 'string' } },
@@ -330,11 +335,32 @@ const openApiDocumentBase = {
         responses: { 200: success('Products fetched successfully') },
       },
     },
+    '/products/bulk': {
+      post: {
+        tags: ['Products'],
+        security: bearer,
+        summary: 'Admin: bulk upload products via ZIP file with CSV and images',
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  file: { type: 'string', format: 'binary', description: 'ZIP file containing products.csv and imageFolder/' },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: success('Products bulk uploaded successfully') },
+      },
+    },
     '/products/inventory-monitoring': {
       get: {
         tags: ['Products'],
         security: bearer,
-        summary: 'Admin: inventory monitoring with auction, payment, winner, and pickup state',
+        summary: 'Admin: get inventory monitoring with auction, payment, winner, and pickup state',
         parameters: [
           { name: 'inventoryStatus', in: 'query', schema: { type: 'string' } },
           { name: 'category', in: 'query', schema: { type: 'string' } },
@@ -346,7 +372,7 @@ const openApiDocumentBase = {
     '/products/{id}': {
       get: {
         tags: ['Products'],
-        summary: 'Get product details',
+        summary: 'Get product details by ID',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: {
           200: success('Product details fetched successfully', {}, { auctions: '/api/v1/auctions' }),
@@ -380,35 +406,102 @@ const openApiDocumentBase = {
       delete: {
         tags: ['Products'],
         security: bearer,
-        summary: 'Admin: delete inactive product and Cloudinary images',
+        summary: 'Admin: soft-delete an inactive product and remove Cloudinary images',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: success('Product deleted successfully') },
+      },
+    },
+    '/category': {
+      post: {
+        tags: ['Categories'],
+        summary: 'Create a new category with optional image',
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'Electronics' },
+                  image: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: success('Category created successfully') },
+      },
+    },
+    '/category/all': {
+      get: {
+        tags: ['Categories'],
+        summary: 'List all categories with pagination',
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'number', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'number', default: 10 } },
+        ],
+        responses: { 200: success('Categories fetched successfully') },
+      },
+    },
+    '/category/{id}': {
+      get: {
+        tags: ['Categories'],
+        summary: 'Get a single category by ID',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: success('Category fetched successfully') },
+      },
+    },
+    '/category/update/{id}': {
+      put: {
+        tags: ['Categories'],
+        summary: 'Update category name and/or image',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: false,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'Electronics' },
+                  image: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: success('Category updated successfully') },
+      },
+    },
+    '/category/toggle/{id}': {
+      put: {
+        tags: ['Categories'],
+        summary: 'Soft-delete or restore a category',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: success('Category status toggled successfully') },
       },
     },
     '/auctions': {
       post: {
         tags: ['Auctions'],
         security: bearer,
-        summary: 'Admin: schedule auction for a product',
+        summary: 'Admin: create a new auction',
         requestBody: {
           required: true,
           content: json({
-            product: 'productObjectId',
-            title: 'Fender Guitar Auction',
+            products: ['productObjectId'],
+            title: 'Electronics Auction',
             startsAt: '2026-08-10T13:00:00.000Z',
             endsAt: '2026-08-11T13:00:00.000Z',
-            startingBid: 1,
-            bidIncrement: 5,
-            reservePrice: 150,
           }),
         },
         responses: {
-          200: success('Auction created successfully', {}, { bid: '/api/v1/auctions/{id}/bids' }),
+          200: success('Auction created successfully', {}, { listAuctions: '/api/v1/auctions' }),
         },
       },
       get: {
         tags: ['Auctions'],
-        summary: 'List auctions',
+        summary: 'List all auctions with optional status filter and pagination',
         parameters: [
           { name: 'status', in: 'query', schema: { type: 'string' } },
           { name: 'page', in: 'query', schema: { type: 'number', default: 1 } },
@@ -417,56 +510,59 @@ const openApiDocumentBase = {
         responses: { 200: success('Auctions fetched successfully') },
       },
     },
-    '/auctions/process-due': {
-      post: {
+    '/auctions/active': {
+      get: {
         tags: ['Auctions'],
-        security: bearer,
-        summary: 'Admin: manually process due auction activations/closures',
-        responses: { 200: success('Due auctions processed successfully') },
+        summary: 'Get currently active auctions',
+        responses: { 200: success('Active auctions fetched successfully') },
+      },
+    },
+    '/auctions/upcoming': {
+      get: {
+        tags: ['Auctions'],
+        summary: 'Get upcoming auctions',
+        responses: { 200: success('Upcoming auctions fetched successfully') },
       },
     },
     '/auctions/{id}': {
       get: {
         tags: ['Auctions'],
-        summary: 'Get auction details',
+        summary: 'Get auction details by ID with populated products',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: {
-          200: success('Auction details fetched successfully', {}, { bids: '/api/v1/auctions/{id}/bids' }),
+          200: success('Auction details fetched successfully', {}, { products: '/api/v1/auction-products/{id}' }),
         },
       },
     },
-    '/auctions/{id}/bids': {
+    '/auction-products/{auctionId}': {
       get: {
-        tags: ['Auctions'],
-        security: bearer,
-        summary: 'Admin: list bid history for an auction',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: success('Auction bids fetched successfully') },
-      },
-      post: {
-        tags: ['Auctions'],
-        security: bearer,
-        summary: 'Place bid; user must have saved Stripe card',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        requestBody: { required: true, content: json({ amount: 205 }) },
-        responses: { 200: success('Bid placed successfully') },
+        tags: ['Auction Products'],
+        summary: 'Get all products associated with an auction',
+        parameters: [{ name: 'auctionId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: success('Auction products fetched successfully') },
       },
     },
-    '/auctions/{id}/close': {
+    '/bid': {
       post: {
-        tags: ['Auctions'],
+        tags: ['Bids'],
         security: bearer,
-        summary: 'Admin: force close auction, validate reserve, and auto-charge winner',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        requestBody: { required: false, content: json({ reason: 'manual_admin_close' }) },
-        responses: { 200: success('Auction closed successfully') },
+        summary: 'Place a bid on an auction product',
+        requestBody: {
+          required: true,
+          content: json({
+            auctionId: 'auctionObjectId',
+            auctionProductId: 'auctionProductObjectId',
+            amount: 205,
+          }),
+        },
+        responses: { 200: success('Bid placed successfully') },
       },
     },
     '/payments/setup-intents': {
       post: {
         tags: ['Payments'],
         security: bearer,
-        summary: 'Create Stripe SetupIntent for saved-card registration',
+        summary: 'Create a Stripe SetupIntent for saved-card registration',
         responses: {
           200: success(
             'Stripe setup intent created successfully',
@@ -479,7 +575,7 @@ const openApiDocumentBase = {
             {
               checkStatus: '/api/v1/payments/setup-intents/{setupIntentId}',
               saveDefaultPaymentMethod: '/api/v1/payments/default-payment-method',
-              swaggerTestHelper: '/api/v1/payments/test-default-payment-method',
+              testHelper: '/api/v1/payments/test-default-payment-method',
             },
           ),
         },
@@ -489,7 +585,7 @@ const openApiDocumentBase = {
       get: {
         tags: ['Payments'],
         security: bearer,
-        summary: 'Check whether a SetupIntent has been confirmed and can be saved',
+        summary: 'Check SetupIntent status to see if it can be saved as default',
         parameters: [
           { name: 'setupIntentId', in: 'path', required: true, schema: { type: 'string' } },
         ],
@@ -507,7 +603,7 @@ const openApiDocumentBase = {
       post: {
         tags: ['Payments'],
         security: bearer,
-        summary: 'Save confirmed Stripe SetupIntent payment method as user default card',
+        summary: 'Save a confirmed Stripe SetupIntent payment method as the user default card',
         description:
           'PCI-safe flow: do not send raw card numbers to this API. Use Stripe.js/Elements on the frontend to confirm the SetupIntent clientSecret, then send the succeeded setupIntentId here.',
         requestBody: { required: true, content: json({ setupIntentId: 'seti_123' }) },
@@ -518,15 +614,15 @@ const openApiDocumentBase = {
       post: {
         tags: ['Payments'],
         security: bearer,
-        summary: 'Development/test-only: save a Stripe test card so Swagger bidding can be tested',
+        summary: 'Dev/test: save a Stripe test card for bidding tests',
         description:
-          'Only works outside production with a Stripe test secret key. It uses Stripe test payment method IDs, never raw card details. Default is pm_card_visa.',
+          'Only works outside production with a Stripe test secret key. Uses Stripe test payment method IDs (default: pm_card_visa).',
         requestBody: { required: false, content: json({ testPaymentMethodId: 'pm_card_visa' }) },
         responses: {
           200: success(
             'Test default payment method saved successfully',
             {},
-            { placeBid: '/api/v1/auctions/{id}/bids' },
+            { placeBid: '/api/v1/bid' },
           ),
         },
       },
@@ -535,7 +631,7 @@ const openApiDocumentBase = {
       get: {
         tags: ['Invoices'],
         security: bearer,
-        summary: 'Customer: list my invoices',
+        summary: 'Customer: list own invoices',
         responses: {
           200: success('Invoices fetched successfully', {}, { schedulePickup: '/api/v1/pickups' }),
         },
@@ -553,7 +649,7 @@ const openApiDocumentBase = {
       post: {
         tags: ['Invoices'],
         security: bearer,
-        summary: 'Admin: verify invoice pickup QR token or pickup code',
+        summary: 'Admin: verify a pickup QR token or pickup code',
         requestBody: { required: true, content: json({ tokenOrCode: 'A1B2C3D4' }) },
         responses: {
           200: success('Pickup token verified successfully', {}, { completePickup: '/api/v1/pickups/complete' }),
@@ -564,7 +660,7 @@ const openApiDocumentBase = {
       post: {
         tags: ['Pickups'],
         security: bearer,
-        summary: 'Admin: create pickup capacity slot',
+        summary: 'Admin: create a pickup capacity slot',
         requestBody: {
           required: true,
           content: json({
@@ -579,7 +675,7 @@ const openApiDocumentBase = {
       get: {
         tags: ['Pickups'],
         security: bearer,
-        summary: 'List available pickup slots',
+        summary: 'List available pickup slots for scheduling',
         responses: { 200: success('Available pickup slots fetched successfully') },
       },
     },
@@ -587,15 +683,15 @@ const openApiDocumentBase = {
       get: {
         tags: ['Pickups'],
         security: bearer,
-        summary: 'Admin: list all pickup slots including inactive/full',
-        responses: { 200: success('Pickup slots fetched successfully') },
+        summary: 'Admin: list all pickup slots including inactive or full ones',
+        responses: { 200: success('All pickup slots fetched successfully') },
       },
     },
     '/pickups/ready-invoices': {
       get: {
         tags: ['Pickups'],
         security: bearer,
-        summary: 'Customer: paid invoices ready for pickup scheduling',
+        summary: 'Customer: list paid invoices that are ready for pickup',
         responses: { 200: success('Ready pickup invoices fetched successfully') },
       },
     },
@@ -603,7 +699,7 @@ const openApiDocumentBase = {
       post: {
         tags: ['Pickups'],
         security: bearer,
-        summary: 'Customer: schedule one or many paid invoices in one appointment',
+        summary: 'Customer: schedule a pickup appointment for paid invoices',
         requestBody: {
           required: true,
           content: json({ slotId: 'pickupSlotObjectId', invoiceIds: ['invoiceObjectId1', 'invoiceObjectId2'] }),
@@ -621,15 +717,15 @@ const openApiDocumentBase = {
       get: {
         tags: ['Pickups'],
         security: bearer,
-        summary: 'Customer: list my pickup appointments',
-        responses: { 200: success('Pickup appointments fetched successfully') },
+        summary: 'Customer: list own pickup appointments',
+        responses: { 200: success('Your pickup appointments fetched successfully') },
       },
     },
     '/pickups/complete': {
       post: {
         tags: ['Pickups'],
         security: bearer,
-        summary: 'Admin: complete warehouse handover by appointment ID or pickup code',
+        summary: 'Admin: complete warehouse handover by pickup code',
         requestBody: {
           required: true,
           content: json({ pickupCode: 'A1B2C3D4', notes: 'Customer picked up all items.' }),
@@ -640,12 +736,14 @@ const openApiDocumentBase = {
     '/contacts': {
       post: {
         tags: ['Contacts'],
-        summary: 'Send contact message',
+        summary: 'Send a contact form message',
         requestBody: {
           required: true,
           content: json({
-            name: 'Customer Name',
+            firstName: 'John',
+            lastName: 'Doe',
             email: 'customer@example.com',
+            phone: '+15555555555',
             message: 'I have a question about pickup.',
           }),
         },
@@ -656,7 +754,7 @@ const openApiDocumentBase = {
       get: {
         tags: ['Reports'],
         security: bearer,
-        summary: 'Admin: revenue summary from paid invoices',
+        summary: 'Admin: get revenue summary from paid invoices',
         parameters: [
           { name: 'startDate', in: 'query', schema: { type: 'string', format: 'date' } },
           { name: 'endDate', in: 'query', schema: { type: 'string', format: 'date' } },
@@ -668,7 +766,7 @@ const openApiDocumentBase = {
       get: {
         tags: ['Reports'],
         security: bearer,
-        summary: 'Admin: auction outcome summary',
+        summary: 'Admin: get auction outcome summary',
         parameters: [
           { name: 'startDate', in: 'query', schema: { type: 'string', format: 'date' } },
           { name: 'endDate', in: 'query', schema: { type: 'string', format: 'date' } },
@@ -680,7 +778,7 @@ const openApiDocumentBase = {
       get: {
         tags: ['Reports'],
         security: bearer,
-        summary: 'Admin: pickup workload summary',
+        summary: 'Admin: get pickup workload summary',
         parameters: [
           { name: 'startDate', in: 'query', schema: { type: 'string', format: 'date' } },
           { name: 'endDate', in: 'query', schema: { type: 'string', format: 'date' } },
@@ -692,7 +790,7 @@ const openApiDocumentBase = {
       get: {
         tags: ['Reports'],
         security: bearer,
-        summary: 'Admin: inventory status summary',
+        summary: 'Admin: get inventory status summary',
         responses: { 200: success('Inventory report fetched successfully') },
       },
     },
@@ -700,13 +798,13 @@ const openApiDocumentBase = {
       get: {
         tags: ['Settings'],
         security: bearer,
-        summary: 'Admin: get platform pickup/storage settings',
+        summary: 'Admin: get platform pickup and storage settings',
         responses: { 200: success('Platform settings fetched successfully') },
       },
       patch: {
         tags: ['Settings'],
         security: bearer,
-        summary: 'Admin: update pickup deadline and storage fee rules',
+        summary: 'Admin: update platform pickup deadline and storage fee rules',
         requestBody: {
           required: true,
           content: json({
@@ -731,15 +829,15 @@ const openApiDocumentBase = {
     '/settings/public': {
       get: {
         tags: ['Settings'],
-        summary: 'Public/customer-visible pickup policy',
-        responses: { 200: success('Platform settings fetched successfully') },
+        summary: 'Get customer-visible pickup policy',
+        responses: { 200: success('Platform public settings fetched successfully') },
       },
     },
     '/notifications': {
       get: {
         tags: ['Notifications'],
         security: bearer,
-        summary: 'Admin: list notifications',
+        summary: 'Admin: list notifications with pagination',
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'number', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'number', default: 10 } },
@@ -751,7 +849,7 @@ const openApiDocumentBase = {
       patch: {
         tags: ['Notifications'],
         security: bearer,
-        summary: 'Mark all notifications as read',
+        summary: 'Admin: mark all notifications as read',
         responses: { 200: success('All notifications marked as read successfully') },
       },
     },

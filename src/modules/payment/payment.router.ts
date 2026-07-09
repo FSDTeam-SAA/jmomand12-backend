@@ -15,19 +15,8 @@ router.get(
   auth(USER_ROLE.USER, USER_ROLE.ADMIN),
   paymentController.getSetupIntentStatus,
 );
-router.post('/setup-intent', auth(USER_ROLE.USER, USER_ROLE.ADMIN), paymentController.createSetupIntent);
-router.get(
-  '/setup-intent/:setupIntentId',
-  auth(USER_ROLE.USER, USER_ROLE.ADMIN),
-  paymentController.getSetupIntentStatus,
-);
 router.post(
   '/default-payment-method',
-  auth(USER_ROLE.USER, USER_ROLE.ADMIN),
-  paymentController.saveDefaultPaymentMethod,
-);
-router.post(
-  '/default-method',
   auth(USER_ROLE.USER, USER_ROLE.ADMIN),
   paymentController.saveDefaultPaymentMethod,
 );

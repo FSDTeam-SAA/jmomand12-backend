@@ -10,11 +10,8 @@ router.get('/slots', auth(USER_ROLE.USER, USER_ROLE.ADMIN), pickupController.get
 router.get('/slots/all', auth(USER_ROLE.ADMIN), pickupController.getAllSlots);
 router.get('/ready-invoices', auth(USER_ROLE.USER, USER_ROLE.ADMIN), pickupController.getMyReadyInvoices);
 router.post('/', auth(USER_ROLE.USER, USER_ROLE.ADMIN), pickupController.schedulePickup);
-router.post('/schedule', auth(USER_ROLE.USER, USER_ROLE.ADMIN), pickupController.schedulePickup);
 router.get('/me', auth(USER_ROLE.USER, USER_ROLE.ADMIN), pickupController.getMyAppointments);
-router.get('/my-appointments', auth(USER_ROLE.USER, USER_ROLE.ADMIN), pickupController.getMyAppointments);
 router.get('/', auth(USER_ROLE.ADMIN), pickupController.getAllAppointments);
-router.get('/appointments', auth(USER_ROLE.ADMIN), pickupController.getAllAppointments);
 router.post('/complete', auth(USER_ROLE.ADMIN), pickupController.completePickup);
 
 const pickupRouter = router;
