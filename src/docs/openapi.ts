@@ -410,8 +410,7 @@ const openApiDocumentBase = {
         security: bearer,
         summary: 'Admin: list all inventory products (for_sale and for_auction)',
         description:
-          'Returns a paginated list of all products across both sale and auction types. ' +
-          'Each item includes inventoryId, title, category, condition, quantity, and type. ' +
+          'Returns a paginated list of all products with full details including price, images, manufacturer, and inventory status. ' +
           'Use the type query parameter to filter by for_sale or for_auction.',
         parameters: [
           { name: 'searchTerm', in: 'query', schema: { type: 'string' }, description: 'Search by title or category (case-insensitive)' },
@@ -431,10 +430,16 @@ const openApiDocumentBase = {
               {
                 inventoryId: 'PRD-000134-07-26',
                 title: 'Samsung Galaxy S24',
+                description: 'Unlocked Samsung Galaxy S24, 128GB, phantom black',
                 category: 'Mobile',
                 condition: 'like_new',
-                quantity: 3,
+                images: [{ public_id: 'products/galaxy-s24_abc', url: 'https://res.cloudinary.com/demo/image/upload/v1/products/galaxy-s24_abc.jpg' }],
+                color: ['Black', 'Green'],
                 type: 'for_sale',
+                quantity: 3,
+                price: 599,
+                manufacturer: 'Samsung',
+                inventoryStatus: 'available',
               },
             ],
             { auctions: '/api/v1/products/auctions', allProducts: '/api/v1/products' },

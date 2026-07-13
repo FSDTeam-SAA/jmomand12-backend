@@ -877,7 +877,7 @@ const getInventoryProducts = async (query: Record<string, unknown>) => {
     .sort(sort)
     .skip(skip)
     .limit(limitNumber)
-    .select('inventoryId title category condition quantity type');
+    .select('inventoryId title description category condition images color type quantity price reservePrice day manufacturer inventoryStatus');
 
   const total = await Product.countDocuments(filter);
 
