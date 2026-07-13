@@ -21,7 +21,7 @@ export interface IAuctionProduct {
   auctionId: Types.ObjectId;
   productId: Types.ObjectId;
   startingBid: number;
-  reservePrice: number;
+  reservePrice?: number;
   bidIncrement: number;
   status: AuctionProductStatus;
   highestBid: IAuctionHighestBid;

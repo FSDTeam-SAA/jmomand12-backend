@@ -205,7 +205,7 @@ const processAuctionProduct = async (
     return await markUnsold(auctionProduct, 'No bids received');
   }
 
-  if (auctionProduct.highestBid.amount < auctionProduct.reservePrice) {
+  if (auctionProduct.reservePrice && auctionProduct.highestBid.amount < auctionProduct.reservePrice) {
     return await markUnsold(auctionProduct, 'Reserve price not met');
   }
 
@@ -279,7 +279,7 @@ const processPayment = async (
     throw new AppError('Winner does not have a saved payment method', 400);
   }
 
-  const product = await Product.findById(auctionProduct.product);
+  const product = await Product.findById(auctionProduct.productId);
   if (!product) {
     throw new AppError('Auction product base product not found', 404);
   }
@@ -292,14 +292,14 @@ const processPayment = async (
       description: `Auction payment for ${product.title}`,
       metadata: {
         auctionProductId: auctionProduct._id.toString(),
-        auctionId: auctionProduct.auction.toString(),
+        auctionId: auctionProduct.auctionId.toString(),
         productId: product._id.toString(),
         winnerId: winner._id.toString(),
       },
     });
 
     const invoice = await invoiceService.createPaidInvoice({
-      auctionId: auctionProduct.auction.toString(),
+      auctionId: auctionProduct.auctionId.toString(),
       productId: product._id.toString(),
       customerId: winner._id.toString(),
       inventoryId: product.inventoryId,
@@ -340,7 +340,7 @@ const processPayment = async (
     await auctionProduct.save();
 
     await invoiceService.createFailedPaymentInvoice({
-      auctionId: auctionProduct.auction.toString(),
+      auctionId: auctionProduct.auctionId.toString(),
       productId: product._id.toString(),
       customerId: winner._id.toString(),
       inventoryId: product.inventoryId,

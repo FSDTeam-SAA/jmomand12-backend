@@ -49,7 +49,6 @@ const auctionProductSchema = new Schema<IAuctionProduct>(
 
     reservePrice: {
       type: Number,
-      required: true,
       min: 0,
     },
 
