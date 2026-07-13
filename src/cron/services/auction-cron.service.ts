@@ -53,7 +53,7 @@ const activateDueAuctions = async (): Promise<IAuctionActivationResult> => {
     status: 'upcoming',
     startsAt: { $lte: now },
     endsAt: { $gt: now },
-  }).select('_id');
+  }).select('_id products');
 
   if (auctions.length === 0) {
     const executionTimeMs = Date.now() - startTime;
@@ -73,17 +73,24 @@ const activateDueAuctions = async (): Promise<IAuctionActivationResult> => {
   );
 
   const auctionProductUpdate = await AuctionProduct.updateMany(
-    { auction: { $in: auctionIds } },
+    { auctionId: { $in: auctionIds } },
     { status: 'active' },
   );
 
+  const productIds = auctions.flatMap((auction) => auction.products);
+  const productUpdate = await Product.updateMany(
+    { _id: { $in: productIds } },
+    { inventoryStatus: 'auction_active' },
+  );
+
   const executionTimeMs = Date.now() - startTime;
-  const message = `Activated ${auctionUpdate.modifiedCount} auction(s) and updated ${auctionProductUpdate.modifiedCount} auction product(s)`;
+  const message = `Activated ${auctionUpdate.modifiedCount} auction(s), updated ${auctionProductUpdate.modifiedCount} auction product(s), and reserved ${productUpdate.modifiedCount} product(s)`;
 
   logger.info(
     {
       activatedCount: auctionUpdate.modifiedCount,
       auctionProductsUpdated: auctionProductUpdate.modifiedCount,
+      productsUpdated: productUpdate.modifiedCount,
       executionTimeMs,
     },
     message,
@@ -158,7 +165,7 @@ const processAuction = async (auction: {
 
   logger.info({ auctionId }, 'Processing auction close event');
 
-  const auctionProducts = await AuctionProduct.find({ auction: auction._id });
+  const auctionProducts = await AuctionProduct.find({ auctionId: auction._id });
 
   await Auction.findByIdAndUpdate(auction._id, { status: 'ended' });
 
@@ -223,6 +230,10 @@ const markUnsold = async (
   auctionProduct.paymentStatus = 'failed';
   auctionProduct.pickupStatus = 'pending';
   await auctionProduct.save();
+
+  await Product.findByIdAndUpdate(auctionProduct.productId, {
+    inventoryStatus: 'unsold',
+  });
 
   logger.info(
     {
@@ -338,6 +349,10 @@ const processPayment = async (
     auctionProduct.status = 'payment_failed';
     auctionProduct.paymentStatus = 'failed';
     await auctionProduct.save();
+
+    await Product.findByIdAndUpdate(product._id, {
+      inventoryStatus: 'payment_pending',
+    });
 
     await invoiceService.createFailedPaymentInvoice({
       auctionId: auctionProduct.auctionId.toString(),

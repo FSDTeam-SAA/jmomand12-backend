@@ -7,7 +7,7 @@ const router = Router();
 
 router.post('/slots', auth(USER_ROLE.ADMIN), pickupController.createSlot);
 router.get('/slots', auth(USER_ROLE.USER, USER_ROLE.ADMIN), pickupController.getAvailableSlots);
-router.get('/slots/all', auth(USER_ROLE.ADMIN), pickupController.getAllSlots);
+router.get('/slots/all', pickupController.getAllSlots);
 router.get('/ready-invoices', auth(USER_ROLE.USER, USER_ROLE.ADMIN), pickupController.getMyReadyInvoices);
 router.post('/', auth(USER_ROLE.USER, USER_ROLE.ADMIN), pickupController.schedulePickup);
 router.get('/me', auth(USER_ROLE.USER, USER_ROLE.ADMIN), pickupController.getMyAppointments);

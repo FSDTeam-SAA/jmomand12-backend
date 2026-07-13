@@ -1,4 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
+import { Types } from 'mongoose';
 import AppError from '../../errors/AppError';
 import Product from '../product/product.model';
 import { User } from '../user/user.model';
@@ -6,6 +7,15 @@ import Auction from './auction.model';
 import { AuctionStatus, IAuction } from './auction.interface';
 import { generateAuctionId } from '../../utils/product.utils';
 import AuctionProduct from '../AuctionProduct/AuctionProduct.model';
+
+const AUCTION_PUBLISHABLE_STATUSES = ['available', 'unsold'] as const;
+const LOCKING_AUCTION_PRODUCT_STATUSES = [
+  'upcoming',
+  'active',
+  'payment_pending',
+  'payment_failed',
+  'sold',
+] as const;
 
 const resolveAuctionStatus = (startsAt: Date, endsAt: Date): AuctionStatus => {
   const now = new Date();
@@ -25,18 +35,53 @@ const createAuction = async (payload: any, email: string) => {
     throw new AppError('Admin account not found', StatusCodes.FORBIDDEN);
   }
 
+  const requestedProductIds: unknown[] = Array.isArray(payload.products) ? payload.products : [];
+  const productIds = Array.from(new Set(requestedProductIds.map((productId) => String(productId))));
+
+  if (!productIds.length) {
+    throw new AppError('At least one product is required', StatusCodes.BAD_REQUEST);
+  }
+
+  if (productIds.some((productId) => !Types.ObjectId.isValid(productId))) {
+    throw new AppError('One or more selected product IDs are invalid', StatusCodes.BAD_REQUEST);
+  }
+
   const products = await Product.find({
-    _id: { $in: payload.products },
+    _id: { $in: productIds },
   });
 
   if (!products.length) {
     throw new AppError('Products not found', StatusCodes.NOT_FOUND);
   }
 
-  for (const product of products) {
-    if (product.inventoryStatus !== 'available' && product.inventoryStatus !== 'unsold') {
-      throw new AppError(`${product.title} is not available for auction`, StatusCodes.BAD_REQUEST);
-    }
+  if (products.length !== productIds.length) {
+    throw new AppError('One or more selected products were not found', StatusCodes.NOT_FOUND);
+  }
+
+  const lockedAuctionProductIds = await AuctionProduct.distinct('productId', {
+    productId: { $in: productIds },
+    status: { $in: LOCKING_AUCTION_PRODUCT_STATUSES },
+  });
+  const lockedProductIds = new Set(lockedAuctionProductIds.map(String));
+
+  const invalidProducts = products.filter(
+    (product) =>
+      product.type !== 'for_auction' ||
+      lockedProductIds.has(product._id.toString()) ||
+      !AUCTION_PUBLISHABLE_STATUSES.includes(
+        product.inventoryStatus as (typeof AUCTION_PUBLISHABLE_STATUSES)[number],
+      ),
+  );
+
+  if (invalidProducts.length) {
+    const details = invalidProducts
+      .map((product) => `${product.title} (${product.inventoryStatus})`)
+      .join(', ');
+
+    throw new AppError(
+      `Only available or unsold auction products can be published. Invalid selections: ${details}`,
+      StatusCodes.BAD_REQUEST,
+    );
   }
 
   const startsAt = new Date(
@@ -79,7 +124,7 @@ const createAuction = async (payload: any, email: string) => {
       },
     },
     {
-      inventoryStatus: status === 'active' ? 'auction_active' : 'available',
+      inventoryStatus: status === 'ended' ? 'auction_ended' : 'auction_active',
     },
   );
 
