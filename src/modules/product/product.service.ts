@@ -18,6 +18,7 @@ import {
   validateProductRowShape,
 } from '../../utils/product.utils';
 import { User } from '../user/user.model';
+import AuctionProduct from '../AuctionProduct/AuctionProduct.model';
 import { IBulkProductRow, IBulkUploadResult, IProduct } from './product.interface';
 import Product from './product.model';
 
@@ -916,6 +917,15 @@ const getAuctionProducts = async (query: Record<string, unknown>) => {
 
   if (inventoryStatus) {
     filter.inventoryStatus = inventoryStatus;
+  } else {
+    filter.inventoryStatus = { $in: ['available', 'unsold'] };
+    const lockedAuctionProductIds = await AuctionProduct.distinct('productId', {
+      status: { $in: ['upcoming', 'active', 'payment_pending', 'payment_failed', 'sold'] },
+    });
+
+    if (lockedAuctionProductIds.length) {
+      filter._id = { $nin: lockedAuctionProductIds };
+    }
   }
 
   const pageNumber = Number(page);
@@ -930,7 +940,7 @@ const getAuctionProducts = async (query: Record<string, unknown>) => {
     .sort(sort)
     .skip(skip)
     .limit(limitNumber)
-    .select('inventoryId title category condition price');
+    .select('inventoryId title category condition price reservePrice inventoryStatus');
 
   const total = await Product.countDocuments(filter);
 

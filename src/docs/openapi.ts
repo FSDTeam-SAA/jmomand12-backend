@@ -443,9 +443,9 @@ const openApiDocumentBase = {
         security: bearer,
         summary: 'Admin: list auction products with retail view pricing',
         description:
-          'Returns a paginated list of products with type "for_auction" only. ' +
+          'Returns a paginated list of products with type "for_auction". By default, only available or unsold products are returned so admins can safely publish selected items to auction. ' +
           'Each item includes inventoryId, title, category, condition, and price (retail view). ' +
-          'Use this endpoint to see auctionable products with their retail pricing for reference.',
+          'Use inventoryStatus to intentionally inspect products in another state.',
         parameters: [
           { name: 'searchTerm', in: 'query', schema: { type: 'string' }, description: 'Search by title or category (case-insensitive)' },
           { name: 'category', in: 'query', schema: { type: 'string' }, description: 'Filter by exact category name' },
@@ -833,8 +833,7 @@ const openApiDocumentBase = {
     '/pickups/slots/all': {
       get: {
         tags: ['Pickups'],
-        security: bearer,
-        summary: 'Admin: list all pickup slots including inactive or full ones',
+        summary: 'List all pickup slots including inactive or full ones',
         responses: { 200: success('All pickup slots fetched successfully') },
       },
     },
