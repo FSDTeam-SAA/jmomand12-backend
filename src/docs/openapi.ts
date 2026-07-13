@@ -375,6 +375,78 @@ const openApiDocumentBase = {
         responses: { 200: success('Products bulk uploaded successfully') },
       },
     },
+    '/products/inventory': {
+      get: {
+        tags: ['Products'],
+        security: bearer,
+        summary: 'Admin: list all inventory products (for_sale and for_auction)',
+        description:
+          'Returns a paginated list of all products across both sale and auction types. ' +
+          'Each item includes inventoryId, title, category, condition, and quantity. ' +
+          'Use this endpoint for a concise inventory overview without images, pricing, or auction details.',
+        parameters: [
+          { name: 'searchTerm', in: 'query', schema: { type: 'string' }, description: 'Search by title or category (case-insensitive)' },
+          { name: 'category', in: 'query', schema: { type: 'string' }, description: 'Filter by exact category name' },
+          { name: 'condition', in: 'query', schema: { type: 'string', enum: ['new', 'open_box', 'like_new', 'used', 'damaged', 'for_parts'] }, description: 'Filter by product condition' },
+          { name: 'inventoryStatus', in: 'query', schema: { type: 'string' }, description: 'Filter by inventory status (e.g. available, auction_active)' },
+          { name: 'sortBy', in: 'query', schema: { type: 'string', default: 'createdAt' }, description: 'Field to sort by' },
+          { name: 'sortOrder', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' }, description: 'Sort direction' },
+          { name: 'page', in: 'query', schema: { type: 'number', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'number', default: 10 } },
+        ],
+        responses: {
+          200: success(
+            'Inventory products fetched successfully',
+            [
+              {
+                inventoryId: 'PRD-000134-07-26',
+                title: 'Samsung Galaxy S24',
+                category: 'Mobile',
+                condition: 'like_new',
+                quantity: 3,
+              },
+            ],
+            { auctions: '/api/v1/products/auctions', allProducts: '/api/v1/products' },
+          ),
+        },
+      },
+    },
+    '/products/auctions': {
+      get: {
+        tags: ['Products'],
+        security: bearer,
+        summary: 'Admin: list auction products with retail view pricing',
+        description:
+          'Returns a paginated list of products with type "for_auction" only. ' +
+          'Each item includes inventoryId, title, category, condition, and price (retail view). ' +
+          'Use this endpoint to see auctionable products with their retail pricing for reference.',
+        parameters: [
+          { name: 'searchTerm', in: 'query', schema: { type: 'string' }, description: 'Search by title or category (case-insensitive)' },
+          { name: 'category', in: 'query', schema: { type: 'string' }, description: 'Filter by exact category name' },
+          { name: 'condition', in: 'query', schema: { type: 'string', enum: ['new', 'open_box', 'like_new', 'used', 'damaged', 'for_parts'] }, description: 'Filter by product condition' },
+          { name: 'inventoryStatus', in: 'query', schema: { type: 'string' }, description: 'Filter by inventory status (e.g. available, auction_active)' },
+          { name: 'sortBy', in: 'query', schema: { type: 'string', default: 'createdAt' }, description: 'Field to sort by' },
+          { name: 'sortOrder', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' }, description: 'Sort direction' },
+          { name: 'page', in: 'query', schema: { type: 'number', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'number', default: 10 } },
+        ],
+        responses: {
+          200: success(
+            'Auction products fetched successfully',
+            [
+              {
+                inventoryId: 'PRD-000138-07-26',
+                title: 'Canon EOS R10',
+                category: 'Camera',
+                condition: 'open_box',
+                price: 499,
+              },
+            ],
+            { inventory: '/api/v1/products/inventory', allProducts: '/api/v1/products' },
+          ),
+        },
+      },
+    },
     '/products/inventory-monitoring': {
       get: {
         tags: ['Products'],

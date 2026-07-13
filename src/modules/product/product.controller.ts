@@ -102,11 +102,37 @@ const deleteProduct = catchAsync(async (req, res) => {
   });
 });
 
+const getInventoryProducts = catchAsync(async (req, res) => {
+  const result = await productService.getInventoryProducts(req.query);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Inventory products fetched successfully',
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+const getAuctionProducts = catchAsync(async (req, res) => {
+  const result = await productService.getAuctionProducts(req.query);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Auction products fetched successfully',
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
 const productController = {
   creteNewProduct,
   productBulkUpload,
   getAllProducts,
   getProductDetails,
+  getInventoryProducts,
+  getAuctionProducts,
   getInventoryMonitoring,
   updateProduct,
   deleteProduct,

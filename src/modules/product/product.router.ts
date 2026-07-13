@@ -22,6 +22,16 @@ router.post(
 
 router.get('/', productController.getAllProducts);
 router.get(
+  '/inventory',
+  auth(USER_ROLE.ADMIN),
+  productController.getInventoryProducts,
+);
+router.get(
+  '/auctions',
+  auth(USER_ROLE.ADMIN),
+  productController.getAuctionProducts,
+);
+router.get(
   '/inventory-monitoring',
   auth(USER_ROLE.ADMIN),
   productController.getInventoryMonitoring,

@@ -835,11 +835,133 @@ const deleteProduct = async (id: string, email: string) => {
   return product;
 };
 
+const getInventoryProducts = async (query: Record<string, unknown>) => {
+  const {
+    searchTerm,
+    category,
+    condition,
+    inventoryStatus,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    page = 1,
+    limit = 10,
+  } = query;
+
+  const filter: any = {};
+
+  if (searchTerm) {
+    filter.$or = [
+      { title: { $regex: searchTerm, $options: 'i' } },
+      { category: { $regex: searchTerm, $options: 'i' } },
+    ];
+  }
+
+  if (category) {
+    filter.category = category;
+  }
+
+  if (condition) {
+    filter.condition = condition;
+  }
+
+  if (inventoryStatus) {
+    filter.inventoryStatus = inventoryStatus;
+  }
+
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const sort: Record<string, 1 | -1> = {
+    [sortBy as string]: sortOrder === 'asc' ? 1 : -1,
+  };
+
+  const products = await Product.find(filter)
+    .sort(sort)
+    .skip(skip)
+    .limit(limitNumber)
+    .select('inventoryId title category condition quantity');
+
+  const total = await Product.countDocuments(filter);
+
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage: Math.ceil(total / limitNumber),
+    },
+    data: products,
+  };
+};
+
+const getAuctionProducts = async (query: Record<string, unknown>) => {
+  const {
+    searchTerm,
+    category,
+    condition,
+    inventoryStatus,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    page = 1,
+    limit = 10,
+  } = query;
+
+  const filter: any = { type: 'for_auction' };
+
+  if (searchTerm) {
+    filter.$or = [
+      { title: { $regex: searchTerm, $options: 'i' } },
+      { category: { $regex: searchTerm, $options: 'i' } },
+    ];
+  }
+
+  if (category) {
+    filter.category = category;
+  }
+
+  if (condition) {
+    filter.condition = condition;
+  }
+
+  if (inventoryStatus) {
+    filter.inventoryStatus = inventoryStatus;
+  }
+
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const sort: Record<string, 1 | -1> = {
+    [sortBy as string]: sortOrder === 'asc' ? 1 : -1,
+  };
+
+  const products = await Product.find(filter)
+    .sort(sort)
+    .skip(skip)
+    .limit(limitNumber)
+    .select('inventoryId title category condition price');
+
+  const total = await Product.countDocuments(filter);
+
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage: Math.ceil(total / limitNumber),
+    },
+    data: products,
+  };
+};
+
 const productService = {
   createProduct,
   bulkUploadProducts,
   getAllProducts,
   getProductDetails,
+  getInventoryProducts,
+  getAuctionProducts,
   getInventoryMonitoring,
   updateProduct,
   deleteProduct,
