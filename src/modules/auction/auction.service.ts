@@ -57,22 +57,16 @@ const createAuction = async (payload: any, email: string) => {
     startsAt,
     endsAt,
     durationInDays: payload.auctionSchedule.durationInDays,
-    startingBid: payload.startingBid,
-    bidIncrement: payload.bidIncrement,
-    reservePrice: payload.reservePrice,
     status,
     pickupSchedule: payload.pickupSchedule,
-    highestBid: {
-      amount: 0,
-    },
   });
 
   await AuctionProduct.insertMany(
     products.map((product) => ({
-      auction: auction._id,
-      product: product._id,
+      auctionId: auction._id,
+      productId: product._id,
       startingBid: payload.startingBid,
-      reservePrice: payload.reservePrice,
+      ...(payload.reservePrice != null ? { reservePrice: payload.reservePrice } : {}),
       bidIncrement: payload.bidIncrement,
       status: auction.status,
     })),

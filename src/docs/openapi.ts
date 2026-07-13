@@ -620,6 +620,10 @@ const openApiDocumentBase = {
         tags: ['Auctions'],
         security: bearer,
         summary: 'Admin: create a new auction',
+        description:
+          'Create a new auction with one or more products. Each product gets an AuctionProduct entry. ' +
+          'The `reservePrice` is optional per-product pricing floor for bidding. ' +
+          'Products must have inventoryStatus "available" or "unsold" to be included.',
         requestBody: {
           required: true,
           content: json({
