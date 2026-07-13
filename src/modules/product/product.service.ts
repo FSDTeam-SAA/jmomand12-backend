@@ -267,16 +267,6 @@ const validateBulkProductRow = (
   const shapeError = validateProductRowShape(row);
   if (shapeError) return shapeError;
 
-  if (type === 'for_auction') {
-    if (!row.day) {
-      return 'Day is required for auction products';
-    }
-
-    if (row.reservePrice == null || !Number.isFinite(row.reservePrice)) {
-      return 'Reserve price is required for auction products';
-    }
-  }
-
   if (type === 'for_sale') {
     if (row.price == null || Number.isNaN(Number(row.price))) {
       return 'Price is required for sale products';
@@ -449,8 +439,8 @@ const bulkUploadProducts = async (
         }
 
         if (type === 'for_auction') {
-          document.day = row.day;
-          document.reservePrice = Number(row.reservePrice);
+          if (row.day) document.day = row.day;
+          if (row.reservePrice != null) document.reservePrice = Number(row.reservePrice);
         }
 
         if (type === 'for_sale') {

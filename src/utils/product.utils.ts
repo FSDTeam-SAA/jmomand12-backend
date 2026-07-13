@@ -49,7 +49,7 @@ export const validateProductRowShape = (row: IBulkProductRow & { row: number }):
   if (!row.condition || !ALLOWED_CONDITIONS.includes(row.condition)) {
     return `Invalid condition. Must be one of: ${ALLOWED_CONDITIONS.join(', ')}`;
   }
-  if (!Number.isFinite(row.reservePrice) || row.reservePrice < 0) {
+  if (row.reservePrice != null && (!Number.isFinite(row.reservePrice) || row.reservePrice < 0)) {
     return 'reservePrice must be a non-negative number';
   }
   if (!row.imageFolder) return 'imageFolder is required';

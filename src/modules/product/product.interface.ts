@@ -37,14 +37,15 @@ export interface IProduct {
 export interface IBulkProductRow {
   title: string;
   description: string;
-  day: string;
+  day?: string;
   category: string;
   condition: string;
-  reservePrice: number;
+  reservePrice?: number;
+  retailPrice?: number;
   color: string[];
   imageFolder: string;
   price?: number;
-  quantity: number;
+  quantity?: number;
   manufacturer?: string;
 }
 

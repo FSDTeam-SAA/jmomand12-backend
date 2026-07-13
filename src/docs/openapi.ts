@@ -359,20 +359,46 @@ const openApiDocumentBase = {
         tags: ['Products'],
         security: bearer,
         summary: 'Admin: bulk upload products via ZIP file with CSV and images',
+        description:
+          'Upload a ZIP archive containing a `products.csv` file and an `imageFolder/` directory with product images. ' +
+          'The CSV columns are: title, description, category, day, condition, reservePrice, color, imageFolder. ' +
+          'Each row\'s imageFolder value must match a subdirectory name inside imageFolder/ in the ZIP. ' +
+          'The `type` field determines whether all products in the batch are created as auction or sale items.',
         requestBody: {
           required: true,
           content: {
             'multipart/form-data': {
               schema: {
                 type: 'object',
+                required: ['file', 'type'],
                 properties: {
                   file: { type: 'string', format: 'binary', description: 'ZIP file containing products.csv and imageFolder/' },
+                  type: {
+                    type: 'string',
+                    enum: ['for_sale', 'for_auction'],
+                    description: 'Product type for all items in the bulk upload. for_auction supports optional day and reservePrice; for_sale requires price and quantity.',
+                  },
                 },
               },
             },
           },
         },
-        responses: { 200: success('Products bulk uploaded successfully') },
+        responses: {
+          200: success(
+            'Bulk product upload processed',
+            {
+              totalProcessed: 10,
+              totalSucceeded: 8,
+              totalFailed: 2,
+              success: [
+                { row: 1, title: 'Apple iPhone 15 Pro', inventoryId: 'PRD-000001-07-26', productId: '64f1...' },
+              ],
+              failed: [
+                { row: 5, title: 'Sony WH-1000XM5', error: 'Image folder "sony-wh1000xm5" not found' },
+              ],
+            },
+          ),
+        },
       },
     },
     '/products/inventory': {
