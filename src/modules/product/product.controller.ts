@@ -23,7 +23,7 @@ const creteNewProduct = catchAsync(async (req, res) => {
 const productBulkUpload = catchAsync(async (req, res) => {
   const { email } = req.user;
   const zipFile = req.file as Express.Multer.File;
-  const type = req.query.type as 'for_sale' | 'for_auction';
+  const type = (req.body.type || req.query.type) as 'for_sale' | 'for_auction';
   const result = await productService.bulkUploadProducts(zipFile, email, type);
 
   sendResponse(res, {
