@@ -14,8 +14,21 @@ const addBid = catchAsync(async (req, res) => {
   });
 });
 
+const getMyDashboardAuctionActivity = catchAsync(async (req, res) => {
+  const { email } = req.user;
+  const result = await bidService.getMyDashboardAuctionActivity(email);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Dashboard auction activity retrieved successfully',
+    data: result,
+  });
+});
+
 const bidController = {
   addBid,
+  getMyDashboardAuctionActivity,
 };
 
 export default bidController;

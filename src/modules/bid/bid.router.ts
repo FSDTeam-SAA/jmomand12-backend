@@ -5,6 +5,7 @@ import { USER_ROLE } from '../user/user.constant';
 
 const router = Router();
 
+router.get('/me/dashboard', auth(USER_ROLE.USER), bidController.getMyDashboardAuctionActivity);
 router.post('/', auth(USER_ROLE.USER), bidController.addBid);
 
 const bidRouter = router;

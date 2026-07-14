@@ -20,7 +20,6 @@ const addToCartOrWishlist = async (email: string, payload: ICart) => {
     throw new AppError('Product not found', StatusCodes.NOT_FOUND);
   }
 
-  // Only for_sale products can be added
   if (product.type !== 'for_sale') {
     throw new AppError(
       'Only for sale products can be added to cart or wishlist',
