@@ -47,6 +47,8 @@ const moduleRoutes = [
   {
     path: '/orders',
     route: orderRouter,
+  },
+  {
     path: '/newsletters',
     route: newsletterRouter,
   },
