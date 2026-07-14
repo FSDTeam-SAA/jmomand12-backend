@@ -24,28 +24,15 @@ export const loginLimiter = rateLimit({
   message: "Too many login attempts, try again later.",
 });
 
-const allowedOrigins = Array.from(
-  new Set(
-    [
-      config.app.frontendUrl,
-      "http://localhost:3000",
-      "http://localhost:3001",
-    ].filter(Boolean),
-  ),
-);
-
 const corsOptions: cors.CorsOptions = {
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-      return;
-    }
-
-    callback(new Error(`CORS blocked for origin: ${origin}`));
+    callback(null, true);
   },
   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
   credentials: true,
 };
+
+
 export const applySecurity = (app: Application) => {
   app.use(globalLimiter);
 
