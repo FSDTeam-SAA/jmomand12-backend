@@ -62,6 +62,7 @@ const openApiDocumentBase = {
     { name: 'Settings', description: 'Platform pickup policy, storage fee, and public settings APIs.' },
     { name: 'Contacts', description: 'Public contact message APIs.' },
     { name: 'Notifications', description: 'Admin notification listing and read-state APIs.' },
+    { name: 'Orders', description: 'Cart checkout, Stripe webhook processing, customer order history, and admin order management.' },
   ],
   components: {
     securitySchemes: {
@@ -1185,6 +1186,80 @@ const openApiDocumentBase = {
         security: bearer,
         summary: 'Admin: mark all notifications as read',
         responses: { 200: success('All notifications marked as read successfully') },
+      },
+    },
+    '/orders/checkout': {
+      post: {
+        tags: ['Orders'],
+        security: bearer,
+        summary: 'Start cart checkout session',
+        description: 'Validates cart products and stock, creates a pending order, and returns a Stripe Checkout Session URL.',
+        responses: {
+          200: success('Stripe checkout session created successfully', {
+            checkoutUrl: 'https://checkout.stripe.com/c/pay/cs_test_...'
+          }),
+          400: errorResponse,
+        },
+      },
+    },
+    '/orders/webhook': {
+      post: {
+        tags: ['Orders'],
+        summary: 'Stripe webhook receiver for orders',
+        description: 'Processes checkout.session.completed webhook events to mark orders as paid, deduct stock, and clear customer carts.',
+        responses: {
+          200: success('Webhook processed successfully', {
+            success: true
+          }),
+          400: errorResponse,
+        },
+      },
+    },
+    '/orders/me': {
+      get: {
+        tags: ['Orders'],
+        security: bearer,
+        summary: 'Retrieve logged-in user\'s orders',
+        responses: {
+          200: success('Your orders retrieved successfully', [
+            {
+              orderNumber: 'ORD-2026-1001',
+              totalAmount: 150.00,
+              status: 'paid',
+              items: [
+                {
+                  product: { title: 'Sample Product' },
+                  quantity: 1,
+                  price: 150.00
+                }
+              ]
+            }
+          ]),
+        },
+      },
+    },
+    '/orders': {
+      get: {
+        tags: ['Orders'],
+        security: bearer,
+        summary: 'Admin: Retrieve all orders',
+        responses: {
+          200: success('All orders retrieved successfully', [
+            {
+              orderNumber: 'ORD-2026-1001',
+              customer: { firstName: 'John', lastName: 'Doe', email: 'john@example.com' },
+              totalAmount: 150.00,
+              status: 'paid',
+              items: [
+                {
+                  product: { title: 'Sample Product' },
+                  quantity: 1,
+                  price: 150.00
+                }
+              ]
+            }
+          ]),
+        },
       },
     },
   },

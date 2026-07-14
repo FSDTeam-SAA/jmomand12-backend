@@ -68,6 +68,13 @@ export const applySecurity = (app: Application) => {
   );
   app.use(compression());
 
-  app.use(express.json({ limit: "10kb" }));
-  app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+  app.use(
+    express.json({
+      limit: "100kb",
+      verify: (req: any, res, buf) => {
+        req.rawBody = buf;
+      },
+    })
+  );
+  app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 };
