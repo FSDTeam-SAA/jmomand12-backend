@@ -1,28 +1,9 @@
 import compression from "compression";
 import cors from "cors";
 import express, { Application } from "express";
-import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import hpp from "hpp";
 import config from "../config";
-
-// Global rate limiter
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
-  max: 150,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: "Too many requests, try again later.",
-});
-
-// Login-specific rate limiter
-export const loginLimiter = rateLimit({
-  windowMs: 20 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: "Too many login attempts, try again later.",
-});
 
 const corsOptions: cors.CorsOptions = {
   origin(origin, callback) {
@@ -34,8 +15,6 @@ const corsOptions: cors.CorsOptions = {
 
 
 export const applySecurity = (app: Application) => {
-  app.use(globalLimiter);
-
   app.use(
     helmet({
       contentSecurityPolicy: false,
