@@ -6,6 +6,15 @@ import { User } from '../user/user.model';
 import PaymentRetry from './payment-retry.model';
 import AuctionProduct from '../AuctionProduct/AuctionProduct.model';
 import { Types } from 'mongoose';
+import Invoice from '../invoice/invoice.model';
+import Order from '../order/order.model';
+
+type AdminPaymentRow = {
+  date: Date | null;
+  transactionId: string | null;
+  method: string;
+  amount: number;
+};
 
 const isProbablyPlaceholderKey = (key?: string) => {
   if (!key) return true;
@@ -476,7 +485,72 @@ const markPaymentRetrySuccessful = async (retryId: string, paymentIntentId: stri
   return retry;
 };
 
+const normalizePositiveInteger = (value: unknown, fallback: number, max?: number) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+
+  const integer = Math.floor(parsed);
+  return max ? Math.min(integer, max) : integer;
+};
+
+const getPaymentDate = (payment: any): Date | null =>
+  payment.paidAt ?? payment.updatedAt ?? payment.createdAt ?? null;
+
+const getPaymentMethod = (transactionId?: string) => {
+  if (transactionId?.startsWith('pi_')) return 'card';
+
+  return 'card';
+};
+
+const getAllPayments = async (query: Record<string, unknown>) => {
+  const page = normalizePositiveInteger(query.page, 1);
+  const limit = normalizePositiveInteger(query.limit, 10, 100);
+  const skip = (page - 1) * limit;
+
+  const [invoices, orders] = await Promise.all([
+    Invoice.find({ status: 'paid' })
+      .select('paidAt updatedAt createdAt stripePaymentIntentId amount')
+      .lean(),
+    Order.find({ status: 'paid' })
+      .select('paidAt updatedAt createdAt stripePaymentIntentId totalAmount')
+      .lean(),
+  ]);
+
+  const payments: AdminPaymentRow[] = [
+    ...invoices.map((invoice: any) => ({
+      date: getPaymentDate(invoice),
+      transactionId: invoice.stripePaymentIntentId ?? null,
+      method: getPaymentMethod(invoice.stripePaymentIntentId),
+      amount: Number(invoice.amount ?? 0),
+    })),
+    ...orders.map((order: any) => ({
+      date: getPaymentDate(order),
+      transactionId: order.stripePaymentIntentId ?? null,
+      method: getPaymentMethod(order.stripePaymentIntentId),
+      amount: Number(order.totalAmount ?? 0),
+    })),
+  ].sort((a, b) => {
+    const firstDate = a.date ? new Date(a.date).getTime() : 0;
+    const secondDate = b.date ? new Date(b.date).getTime() : 0;
+
+    return secondDate - firstDate;
+  });
+
+  const total = payments.length;
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+    data: payments.slice(skip, skip + limit),
+  };
+};
+
 const paymentService = {
+  getAllPayments,
   createSetupIntent,
   getSetupIntentStatus,
   saveDefaultPaymentMethod,

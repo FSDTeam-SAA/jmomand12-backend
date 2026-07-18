@@ -886,6 +886,55 @@ const openApiDocumentBase = {
         },
       },
     },
+    '/payments': {
+      get: {
+        tags: ['Payments'],
+        security: bearer,
+        summary: 'Admin: list all completed payments for dashboard',
+        description:
+          'Returns paid auction invoices and paid cart orders as a compact admin dashboard list. Invalid page or limit values fall back to safe defaults. Missing Stripe transaction IDs are returned as null.',
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, default: 1 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Payments retrieved successfully',
+            content: json({
+              success: true,
+              message: 'Payments retrieved successfully',
+              statusCode: 200,
+              data: [
+                {
+                  date: '2026-07-17T22:43:04.089Z',
+                  transactionId: 'pi_3Pabc123',
+                  method: 'card',
+                  amount: 1000,
+                },
+              ],
+              meta: {
+                page: 1,
+                limit: 10,
+                total: 1,
+                totalPage: 1,
+              },
+            }),
+          },
+          401: errorResponse,
+          403: errorResponse,
+        },
+      },
+    },
     '/payments/setup-intents': {
       post: {
         tags: ['Payments'],

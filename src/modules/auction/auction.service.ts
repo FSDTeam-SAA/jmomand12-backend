@@ -7,6 +7,7 @@ import Auction from './auction.model';
 import { AuctionStatus, IAuction, IDayAvailability } from './auction.interface';
 import { generateAuctionId } from '../../utils/product.utils';
 import AuctionProduct from '../AuctionProduct/AuctionProduct.model';
+import { PUBLIC_USER_SELECT } from '../user/user.utils';
 
 const AUCTION_PUBLISHABLE_STATUSES = ['available', 'unsold'] as const;
 const LOCKING_AUCTION_PRODUCT_STATUSES = [
@@ -436,7 +437,7 @@ const getAuctionsByDay = async (dayName?: string) => {
       matchingAuctions.map(async (auction) => {
         const products = await AuctionProduct.find({ auctionId: auction._id })
           .populate('productId')
-          .populate('highestBid.bidder', 'firstName lastName');
+          .populate('highestBid.bidder', PUBLIC_USER_SELECT);
 
         return {
           ...auction.toObject(),

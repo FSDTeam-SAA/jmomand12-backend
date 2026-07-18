@@ -2,11 +2,15 @@ import { Types } from 'mongoose';
 import { StatusCodes } from 'http-status-codes';
 import AuctionProduct from './AuctionProduct.model';
 import AppError from '../../errors/AppError';
+import { PUBLIC_USER_SELECT, toPublicUser } from '../user/user.utils';
 
 const getProductsByAuctionId = async (auctionId: string) => {
   const result = await AuctionProduct.find({
     auctionId: new Types.ObjectId(auctionId),
-  }).populate('productId');
+  })
+    .populate('productId')
+    .populate('highestBid.bidder', PUBLIC_USER_SELECT)
+    .populate('winner', PUBLIC_USER_SELECT);
 
   return result;
 };
@@ -20,14 +24,14 @@ const getSingleAuctionProduct = async (auctionProductId: string) => {
     (await AuctionProduct.findById(auctionProductId)
       .populate('productId')
       .populate('auctionId', 'auctionId title description startsAt endsAt status')
-      .populate('highestBid.bidder', 'firstName lastName')
-      .populate('winner', 'firstName lastName')) ||
+      .populate('highestBid.bidder', PUBLIC_USER_SELECT)
+      .populate('winner', PUBLIC_USER_SELECT)) ||
     (await AuctionProduct.findOne({ productId: new Types.ObjectId(auctionProductId) })
       .sort({ createdAt: -1 })
       .populate('productId')
       .populate('auctionId', 'auctionId title description startsAt endsAt status')
-      .populate('highestBid.bidder', 'firstName lastName')
-      .populate('winner', 'firstName lastName'));
+      .populate('highestBid.bidder', PUBLIC_USER_SELECT)
+      .populate('winner', PUBLIC_USER_SELECT));
 
   if (!auctionProduct) {
     throw new AppError('Auction product not found', StatusCodes.NOT_FOUND);
@@ -51,22 +55,10 @@ const getSingleAuctionProduct = async (auctionProductId: string) => {
     highestBid: {
       amount: currentBid,
       placedAt: auctionProduct.highestBid?.placedAt ?? null,
-      bidder: highestBidBidder
-        ? {
-            _id: highestBidBidder._id,
-            firstName: highestBidBidder.firstName,
-            lastName: highestBidBidder.lastName,
-          }
-        : null,
+      bidder: toPublicUser(highestBidBidder),
     },
     minimumNextBid,
-    winner: winner
-      ? {
-          _id: winner._id,
-          firstName: winner.firstName,
-          lastName: winner.lastName,
-        }
-      : null,
+    winner: toPublicUser(winner),
     closedAt: auctionProduct.closedAt ?? null,
     paymentStatus: auctionProduct.paymentStatus,
     pickupStatus: auctionProduct.pickupStatus,

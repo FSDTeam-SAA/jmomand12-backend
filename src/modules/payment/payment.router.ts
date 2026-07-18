@@ -8,6 +8,7 @@ const router = Router();
 // Webhook endpoint - must be first and without authentication
 router.post('/webhook', paymentController.handleStripeWebhook);
 
+router.get('/', auth(USER_ROLE.ADMIN), paymentController.getAllPayments);
 router.post(
   '/setup-intents',
   auth(USER_ROLE.USER, USER_ROLE.ADMIN),
