@@ -1,6 +1,7 @@
 import { Job, Worker } from 'bullmq';
 import logger from '../logger';
 import sendEmail from '../utils/sendEmail';
+import outbidEmailTemplate from '../utils/outbidEmailTemplate';
 import {
   EMAIL_QUEUE_NAME,
   EmailJobData,
@@ -12,45 +13,6 @@ import { redisConnection } from './redis.connection';
 
 let emailWorker: Worker<EmailJobData> | null = null;
 
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-
-const buildOutbidEmailHtml = (data: OutbidEmailJobData) => {
-  const productUrl = `${data.frontendUrl.replace(/\/$/, '')}/auction-products/${data.auctionProductId}`;
-
-  return `
-    <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.6;">
-      <h2 style="margin: 0 0 16px;">You have been outbid</h2>
-      <p>Hello ${escapeHtml(data.previousBidderName)},</p>
-      <p>
-        Another bidder, ${escapeHtml(data.newBidderName)}, placed a higher bid on
-        <strong>${escapeHtml(data.productTitle)}</strong>.
-      </p>
-      <p>
-        Your previous bid: <strong>${formatCurrency(data.previousBidAmount)}</strong><br />
-        New highest bid: <strong>${formatCurrency(data.newBidAmount)}</strong>
-      </p>
-      <p>
-        <a href="${productUrl}" style="color: #2563eb;">View the auction product</a>
-      </p>
-      <p style="color: #6b7280; font-size: 13px;">
-        If you still want this item, you can place a new bid while the auction is active.
-      </p>
-    </div>
-  `;
-};
-
 const processEmailJob = async (job: Job<EmailJobData>) => {
   if (job.name !== OUTBID_EMAIL_JOB) {
     throw new Error(`Unsupported email job type: ${job.name}`);
@@ -60,7 +22,7 @@ const processEmailJob = async (job: Job<EmailJobData>) => {
   const result = await sendEmail({
     to: data.previousBidderEmail,
     subject: `You have been outbid on ${data.productTitle}`,
-    html: buildOutbidEmailHtml(data),
+    html: outbidEmailTemplate(data),
   });
 
   if (!result.success) {
