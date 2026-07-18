@@ -3,6 +3,7 @@ import auctionProductController from './AuctionProduct.controller';
 
 const router = Router();
 
+router.get('/active', auctionProductController.getAllActiveAuction);
 router.get('/details/:auctionProductId', auctionProductController.getSingleAuctionProduct);
 router.get('/:auctionId', auctionProductController.getProductsByAuctionId);
 

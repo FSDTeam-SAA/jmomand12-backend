@@ -102,9 +102,18 @@ const getSingleAuctionProduct = async (auctionProductId: string) => {
   };
 };
 
+const getAllActiveAuction = async () => {
+  const result = await AuctionProduct.find({ status: 'active' })
+    .populate('productId')
+    .populate('auctionId', 'auctionId startsAt endsAt');
+
+  return result;
+};
+
 const auctionProductService = {
   getProductsByAuctionId,
   getSingleAuctionProduct,
+  getAllActiveAuction,
 };
 
 export default auctionProductService;

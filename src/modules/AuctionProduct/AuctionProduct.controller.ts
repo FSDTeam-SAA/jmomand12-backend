@@ -26,9 +26,21 @@ const getSingleAuctionProduct = catchAsync(async (req, res) => {
   });
 });
 
+const getAllActiveAuction = catchAsync(async (req, res) => {
+  const result = await auctionProductService.getAllActiveAuction();
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Active auctions retrieved successfully',
+    data: result,
+  });
+});
+
 const auctionProductController = {
   getProductsByAuctionId,
   getSingleAuctionProduct,
+  getAllActiveAuction,
 };
 
 export default auctionProductController;
