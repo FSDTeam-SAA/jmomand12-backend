@@ -9,6 +9,11 @@ const router = Router();
 router.post('/webhook', paymentController.handleStripeWebhook);
 
 router.get('/', auth(USER_ROLE.ADMIN), paymentController.getAllPayments);
+router.get(
+  '/test-helper-status',
+  auth(USER_ROLE.USER, USER_ROLE.ADMIN),
+  paymentController.getTestHelperStatus,
+);
 router.post(
   '/setup-intents',
   auth(USER_ROLE.USER, USER_ROLE.ADMIN),

@@ -35,6 +35,10 @@ const stripe = !isProbablyPlaceholderKey(config.stripe.secretKey)
 
 const isStripeTestMode = () => config.stripe.secretKey?.startsWith('sk_test_') === true;
 
+const getTestHelperStatus = () => ({
+  enabled: config.NODE_ENV === 'development',
+});
+
 const requireStripe = () => {
   if (!stripe) {
     throw new AppError(
@@ -551,6 +555,7 @@ const getAllPayments = async (query: Record<string, unknown>) => {
 
 const paymentService = {
   getAllPayments,
+  getTestHelperStatus,
   createSetupIntent,
   getSetupIntentStatus,
   saveDefaultPaymentMethod,

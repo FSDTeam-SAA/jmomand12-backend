@@ -18,6 +18,15 @@ const getAllPayments = catchAsync(async (req, res) => {
   });
 });
 
+const getTestHelperStatus = catchAsync(async (_req, res) => {
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Test payment helper status fetched successfully',
+    data: paymentService.getTestHelperStatus(),
+  });
+});
+
 const createSetupIntent = catchAsync(async (req, res) => {
   const { email } = req.user;
   const result = await paymentService.createSetupIntent(email);
@@ -127,6 +136,7 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
 
 const paymentController = {
   getAllPayments,
+  getTestHelperStatus,
   createSetupIntent,
   getSetupIntentStatus,
   saveDefaultPaymentMethod,

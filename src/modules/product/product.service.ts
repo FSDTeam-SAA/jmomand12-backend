@@ -744,9 +744,9 @@ const deleteProduct = async (id: string, email: string) => {
     throw new AppError('Product not found', StatusCodes.NOT_FOUND);
   }
 
-  if (!['available', 'unsold', 'unavailable'].includes(product.inventoryStatus)) {
-    throw new AppError('Only inactive inventory can be deleted', StatusCodes.BAD_REQUEST);
-  }
+  // if (!['available', 'unsold', 'unavailable'].includes(product.inventoryStatus)) {
+  //   throw new AppError('Only inactive inventory can be deleted', StatusCodes.BAD_REQUEST);
+  // }
 
   if (product.images?.length) {
     await Promise.all(product.images.map((image) => deleteFromCloudinary(image.public_id)));
@@ -762,7 +762,7 @@ const getInventoryProducts = async (query: Record<string, unknown>) => {
     category,
     condition,
     inventoryStatus,
-    productType,
+    type,
     sortBy = 'createdAt',
     sortOrder = 'desc',
     page = 1,
@@ -790,8 +790,8 @@ const getInventoryProducts = async (query: Record<string, unknown>) => {
     filter.inventoryStatus = inventoryStatus;
   }
 
-  if (productType) {
-    filter.type = productType;
+  if (type) {
+    filter.type = type;
   }
 
   const pageNumber = Number(page);
