@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { StatusCodes } from 'http-status-codes';
 import AuctionProduct from './AuctionProduct.model';
 import AppError from '../../errors/AppError';
-import { PUBLIC_USER_SELECT, toPublicUser } from '../user/user.utils';
+import { DETAILED_PUBLIC_USER_SELECT, PUBLIC_USER_SELECT, toPublicUser } from '../user/user.utils';
 
 const getProductsByAuctionId = async (auctionId: string) => {
   const result = await AuctionProduct.find({
@@ -24,14 +24,16 @@ const getSingleAuctionProduct = async (auctionProductId: string) => {
     (await AuctionProduct.findById(auctionProductId)
       .populate('productId')
       .populate('auctionId', 'auctionId title description startsAt endsAt status')
-      .populate('highestBid.bidder', PUBLIC_USER_SELECT)
-      .populate('winner', PUBLIC_USER_SELECT)) ||
+      .populate('highestBid.bidder', DETAILED_PUBLIC_USER_SELECT)
+      .populate('highestBid.bid')
+      .populate('winner', DETAILED_PUBLIC_USER_SELECT)) ||
     (await AuctionProduct.findOne({ productId: new Types.ObjectId(auctionProductId) })
       .sort({ createdAt: -1 })
       .populate('productId')
       .populate('auctionId', 'auctionId title description startsAt endsAt status')
-      .populate('highestBid.bidder', PUBLIC_USER_SELECT)
-      .populate('winner', PUBLIC_USER_SELECT));
+      .populate('highestBid.bidder', DETAILED_PUBLIC_USER_SELECT)
+      .populate('highestBid.bid')
+      .populate('winner', DETAILED_PUBLIC_USER_SELECT));
 
   if (!auctionProduct) {
     throw new AppError('Auction product not found', StatusCodes.NOT_FOUND);
@@ -41,6 +43,7 @@ const getSingleAuctionProduct = async (auctionProductId: string) => {
   const auction = auctionProduct.auctionId as any;
   const highestBidBidder = auctionProduct.highestBid?.bidder as any;
   const winner = auctionProduct.winner as any;
+  const highestBid = auctionProduct.highestBid as any;
   const currentBid = auctionProduct.highestBid?.amount ?? 0;
   const minimumNextBid =
     currentBid > 0 ? currentBid + auctionProduct.bidIncrement : auctionProduct.startingBid;
@@ -56,6 +59,7 @@ const getSingleAuctionProduct = async (auctionProductId: string) => {
       amount: currentBid,
       placedAt: auctionProduct.highestBid?.placedAt ?? null,
       bidder: toPublicUser(highestBidBidder),
+      bid: highestBid?.bid ?? null,
     },
     minimumNextBid,
     winner: toPublicUser(winner),

@@ -1,6 +1,9 @@
 export const PUBLIC_USER_SELECT =
   '-password -otp -otpExpires -resetPasswordOtp -resetPasswordOtpExpires -stripeCustomerId -defaultPaymentMethodId';
 
+export const DETAILED_PUBLIC_USER_SELECT =
+  '_id firstName lastName email phone street location postalCode dateOfBirth role image isSuspend isBlocked isVerified hasDefaultPaymentMethod createdAt updatedAt';
+
 export const toPublicUser = (user: any) => {
   if (!user) return null;
 

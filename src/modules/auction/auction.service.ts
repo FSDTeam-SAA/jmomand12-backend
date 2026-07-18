@@ -18,6 +18,67 @@ const LOCKING_AUCTION_PRODUCT_STATUSES = [
   'sold',
 ] as const;
 
+const toPlainObject = (value: any) =>
+  value && typeof value.toObject === 'function' ? value.toObject() : value;
+
+const getIdString = (value: any) => {
+  const id = value?._id ?? value;
+  return id ? String(id) : '';
+};
+
+const addAuctionProductMetadata = async (auctions: any[]) => {
+  if (!auctions.length) return auctions;
+
+  const auctionIds = auctions.map((auction) => auction._id);
+  const auctionProducts = await AuctionProduct.find({ auctionId: { $in: auctionIds } })
+    .populate('highestBid.bidder', PUBLIC_USER_SELECT)
+    .lean();
+
+  const auctionProductByAuctionAndProduct = new Map<string, any>();
+  const auctionProductsByAuction = new Map<string, any[]>();
+  for (const auctionProduct of auctionProducts) {
+    const auctionId = String(auctionProduct.auctionId);
+    auctionProductByAuctionAndProduct.set(
+      `${auctionId}:${auctionProduct.productId}`,
+      auctionProduct,
+    );
+    const existingAuctionProducts = auctionProductsByAuction.get(auctionId) ?? [];
+    existingAuctionProducts.push(auctionProduct);
+    auctionProductsByAuction.set(auctionId, existingAuctionProducts);
+  }
+
+  return auctions.map((auction) => {
+    const auctionObject = toPlainObject(auction);
+    const products = Array.isArray(auctionObject.products) ? auctionObject.products : [];
+
+    return {
+      ...auctionObject,
+      products: products.map((product: any) => {
+        const productObject = toPlainObject(product);
+        const auctionProduct = auctionProductByAuctionAndProduct.get(
+          `${auctionObject._id}:${getIdString(productObject)}`,
+        );
+
+        if (!auctionProduct) return productObject;
+
+        const currentBid = auctionProduct.highestBid?.amount ?? 0;
+
+        return {
+          ...productObject,
+          auctionProductId: auctionProduct._id,
+          auctionProductStatus: auctionProduct.status,
+          currentBid,
+          minimumNextBid:
+            currentBid > 0
+              ? currentBid + auctionProduct.bidIncrement
+              : auctionProduct.startingBid,
+        };
+      }),
+      auctionProducts: auctionProductsByAuction.get(String(auctionObject._id)) ?? [],
+    };
+  });
+};
+
 const resolveAuctionStatus = (startsAt: Date, endsAt: Date): AuctionStatus => {
   const now = new Date();
 
@@ -129,7 +190,10 @@ const createAuction = async (payload: any, email: string) => {
     },
   );
 
-  return auction.populate('products');
+  const populatedAuction = await auction.populate('products');
+  const [auctionWithProductMetadata] = await addAuctionProductMetadata([populatedAuction]);
+
+  return auctionWithProductMetadata;
 };
 
 const getActiveAuctions = async (query: Record<string, unknown>) => {
@@ -153,6 +217,8 @@ const getActiveAuctions = async (query: Record<string, unknown>) => {
     }),
   ]);
 
+  const data = await addAuctionProductMetadata(auctions);
+
   return {
     meta: {
       page: pageNumber,
@@ -160,7 +226,7 @@ const getActiveAuctions = async (query: Record<string, unknown>) => {
       total,
       totalPage: Math.ceil(total / limitNumber),
     },
-    data: auctions,
+    data,
   };
 };
 
@@ -219,6 +285,8 @@ const getAllAuctions = async (query: Record<string, unknown>) => {
     Auction.countDocuments(filter),
   ]);
 
+  const data = await addAuctionProductMetadata(auctions);
+
   return {
     meta: {
       page: pageNumber,
@@ -226,7 +294,7 @@ const getAllAuctions = async (query: Record<string, unknown>) => {
       total,
       totalPage: Math.ceil(total / limitNumber),
     },
-    data: auctions,
+    data,
   };
 };
 
@@ -239,7 +307,9 @@ const getAuctionDetails = async (id: string) => {
     throw new AppError('Auction not found', StatusCodes.NOT_FOUND);
   }
 
-  return auction;
+  const [auctionWithProductMetadata] = await addAuctionProductMetadata([auction]);
+
+  return auctionWithProductMetadata;
 };
 
 const getUpcomingAuctions = async (query: Record<string, unknown>) => {
@@ -264,6 +334,8 @@ const getUpcomingAuctions = async (query: Record<string, unknown>) => {
     Auction.countDocuments(filter),
   ]);
 
+  const data = await addAuctionProductMetadata(auctions);
+
   return {
     meta: {
       page: pageNumber,
@@ -271,7 +343,7 @@ const getUpcomingAuctions = async (query: Record<string, unknown>) => {
       total,
       totalPage: Math.ceil(total / limitNumber),
     },
-    data: auctions,
+    data,
   };
 };
 
@@ -302,8 +374,9 @@ const getClosingSoonAuctions = async (query: Record<string, unknown>) => {
     Auction.countDocuments(filter),
   ]);
 
-  const data = auctions.map((auction) => {
-    const auctionObj = auction.toObject();
+  const auctionsWithProductMetadata = await addAuctionProductMetadata(auctions);
+  const data = auctionsWithProductMetadata.map((auction) => {
+    const auctionObj = toPlainObject(auction);
     const timeRemaining = Math.max(
       0,
       Math.floor((new Date(auctionObj.endsAt).getTime() - now.getTime()) / 1000),
@@ -344,6 +417,8 @@ const getClosedAuctions = async (query: Record<string, unknown>) => {
     Auction.countDocuments(filter),
   ]);
 
+  const data = await addAuctionProductMetadata(auctions);
+
   return {
     meta: {
       page: pageNumber,
@@ -351,7 +426,7 @@ const getClosedAuctions = async (query: Record<string, unknown>) => {
       total,
       totalPage: Math.ceil(total / limitNumber),
     },
-    data: auctions,
+    data,
   };
 };
 
