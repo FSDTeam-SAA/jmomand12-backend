@@ -78,12 +78,12 @@ const createTestDefaultPaymentMethod = catchAsync(async (req, res) => {
 
 const handleStripeWebhook = async (req: Request, res: Response) => {
   const signature = req.headers['stripe-signature'] as string;
-  const body = req.body;
+  const body = (req as any).rawBody;
 
-  if (!signature || !config.stripe.webhookSecret) {
+  if (!signature || !body || !config.stripe.webhookSecret) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
-      message: 'Missing webhook signature or webhook secret not configured',
+      message: 'Missing webhook signature, raw body, or webhook secret not configured',
     });
   }
 

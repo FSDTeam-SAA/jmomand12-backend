@@ -92,6 +92,15 @@ const AuctionSchema = new Schema<IAuction>(
       type: PickUpScheduleSchema,
       required: false,
     },
+    buyerPremiumEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    buyerPremiumAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
 
     winner: {
       type: Schema.Types.ObjectId,

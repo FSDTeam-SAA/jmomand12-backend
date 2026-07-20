@@ -13,6 +13,8 @@ router.get('/upcoming', auctionController.getUpcomingAuctions);
 router.get('/closing-soon', auctionController.getClosingSoonAuctions);
 router.get('/closed', auctionController.getClosedAuctions);
 router.get('/by-day', auctionController.getAuctionsByDay);
+router.patch('/:id/close', auth(USER_ROLE.ADMIN), auctionController.closeAuction);
+router.patch('/:id/cancel', auth(USER_ROLE.ADMIN), auctionController.cancelAuction);
 router.get('/:id', auctionController.getAuctionDetails);
 
 const auctionRouter = router;

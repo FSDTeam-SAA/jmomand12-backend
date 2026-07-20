@@ -37,6 +37,50 @@ const invoiceSchema = new Schema<IInvoice>(
       required: true,
       min: 0,
     },
+    subtotal: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    buyerPremiumAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    salesTaxAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    taxableAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    totalAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    stateTaxRate: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    stateTaxState: {
+      type: String,
+      trim: true,
+    },
+    stateTaxLabel: {
+      type: String,
+      trim: true,
+    },
     status: {
       type: String,
       enum: ['payment_pending', 'paid', 'payment_failed', 'void'],

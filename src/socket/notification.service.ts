@@ -9,6 +9,18 @@ export const initNotificationSocket = (socketIO: Server) => {
   io = socketIO;
 };
 
+export const emitAuctionBidUpdate = (auctionId: string, payload: Record<string, unknown>) => {
+  if (!io) return;
+
+  io.to(`auction:${auctionId}`).emit("auction:bid-updated", payload);
+};
+
+export const emitAuctionStatusUpdate = (auctionId: string, payload: Record<string, unknown>) => {
+  if (!io) return;
+
+  io.to(`auction:${auctionId}`).emit("auction:status-updated", payload);
+};
+
 export const createNotification = async ({
   to,
   message,

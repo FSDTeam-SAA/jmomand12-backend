@@ -24,6 +24,8 @@ async function main() {
     io.on('connection', (socket) => {
       logger.info(`Client connected: ${socket.id}`);
       socket.on('joinRoom', (userId) => socket.join(userId));
+      socket.on('joinAuctionRoom', (auctionId) => socket.join(`auction:${auctionId}`));
+      socket.on('leaveAuctionRoom', (auctionId) => socket.leave(`auction:${auctionId}`));
     });
 
     initNotificationSocket(io);

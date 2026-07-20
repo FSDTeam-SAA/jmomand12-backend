@@ -28,6 +28,19 @@ const settingsSchema = new Schema<ISettings>(
       type: String,
       trim: true,
     },
+    stateTaxRate: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    stateTaxState: {
+      type: String,
+      trim: true,
+    },
+    stateTaxLabel: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,

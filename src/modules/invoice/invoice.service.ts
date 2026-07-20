@@ -6,6 +6,7 @@ import AppError from '../../errors/AppError';
 import sendEmail from '../../utils/sendEmail';
 import { User } from '../user/user.model';
 import Invoice from './invoice.model';
+import { InvoiceChargeBreakdown } from './invoice.utils';
 
 const generateInvoiceNumber = async () => {
   const year = new Date().getFullYear();
@@ -34,7 +35,7 @@ const sendWinnerInvoiceEmail = async (params: {
   productTitle: string;
   inventoryId: string;
   invoiceNumber: string;
-  amount: number;
+  charges: InvoiceChargeBreakdown;
   pickupCode: string;
   pickupQrDataUrl?: string;
 }) => {
@@ -49,7 +50,10 @@ const sendWinnerInvoiceEmail = async (params: {
         <p><strong>Invoice:</strong> ${params.invoiceNumber}</p>
         <p><strong>Item:</strong> ${params.productTitle}</p>
         <p><strong>Inventory ID:</strong> ${params.inventoryId}</p>
-        <p><strong>Paid Amount:</strong> $${params.amount.toFixed(2)}</p>
+        <p><strong>Winning Bid:</strong> $${params.charges.subtotal.toFixed(2)}</p>
+        <p><strong>Buyer Premium:</strong> $${params.charges.buyerPremiumAmount.toFixed(2)}</p>
+        <p><strong>State Tax:</strong> $${params.charges.salesTaxAmount.toFixed(2)}</p>
+        <p><strong>Paid Amount:</strong> $${params.charges.totalAmount.toFixed(2)}</p>
         <p><strong>Pickup Code:</strong> ${params.pickupCode}</p>
         ${
           params.pickupQrDataUrl
@@ -68,6 +72,7 @@ const createPaidInvoice = async (params: {
   customerId: string;
   inventoryId: string;
   amount: number;
+  charges?: InvoiceChargeBreakdown;
   stripePaymentIntentId?: string;
   productTitle: string;
 }) => {
@@ -79,6 +84,14 @@ const createPaidInvoice = async (params: {
   const pickupToken = crypto.randomBytes(32).toString('hex');
   const pickupCode = generatePickupCode();
   const pickupQrDataUrl = await createPickupQrDataUrl(pickupToken);
+  const charges = params.charges ?? {
+    subtotal: params.amount,
+    buyerPremiumAmount: 0,
+    salesTaxAmount: 0,
+    taxableAmount: params.amount,
+    totalAmount: params.amount,
+    stateTaxRate: 0,
+  };
 
   const invoice = await Invoice.create({
     invoiceNumber: await generateInvoiceNumber(),
@@ -86,7 +99,15 @@ const createPaidInvoice = async (params: {
     product: params.productId,
     customer: params.customerId,
     inventoryId: params.inventoryId,
-    amount: params.amount,
+    amount: charges.totalAmount,
+    subtotal: charges.subtotal,
+    buyerPremiumAmount: charges.buyerPremiumAmount,
+    salesTaxAmount: charges.salesTaxAmount,
+    taxableAmount: charges.taxableAmount,
+    totalAmount: charges.totalAmount,
+    stateTaxRate: charges.stateTaxRate,
+    stateTaxState: charges.stateTaxState,
+    stateTaxLabel: charges.stateTaxLabel,
     status: 'paid',
     stripePaymentIntentId: params.stripePaymentIntentId,
     pickupCode,
@@ -101,7 +122,7 @@ const createPaidInvoice = async (params: {
     productTitle: params.productTitle,
     inventoryId: params.inventoryId,
     invoiceNumber: invoice.invoiceNumber,
-    amount: params.amount,
+    charges,
     pickupCode,
     pickupQrDataUrl,
   });
@@ -115,9 +136,18 @@ const createFailedPaymentInvoice = async (params: {
   customerId: string;
   inventoryId: string;
   amount: number;
+  charges?: InvoiceChargeBreakdown;
   failureReason: string;
 }) => {
   const pickupToken = crypto.randomBytes(32).toString('hex');
+  const charges = params.charges ?? {
+    subtotal: params.amount,
+    buyerPremiumAmount: 0,
+    salesTaxAmount: 0,
+    taxableAmount: params.amount,
+    totalAmount: params.amount,
+    stateTaxRate: 0,
+  };
 
   return Invoice.create({
     invoiceNumber: await generateInvoiceNumber(),
@@ -125,7 +155,15 @@ const createFailedPaymentInvoice = async (params: {
     product: params.productId,
     customer: params.customerId,
     inventoryId: params.inventoryId,
-    amount: params.amount,
+    amount: charges.totalAmount,
+    subtotal: charges.subtotal,
+    buyerPremiumAmount: charges.buyerPremiumAmount,
+    salesTaxAmount: charges.salesTaxAmount,
+    taxableAmount: charges.taxableAmount,
+    totalAmount: charges.totalAmount,
+    stateTaxRate: charges.stateTaxRate,
+    stateTaxState: charges.stateTaxState,
+    stateTaxLabel: charges.stateTaxLabel,
     status: 'payment_failed',
     pickupCode: generatePickupCode(),
     pickupTokenHash: hashPickupToken(pickupToken),

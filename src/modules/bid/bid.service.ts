@@ -7,6 +7,7 @@ import Invoice from '../invoice/invoice.model';
 import { PickupAppointment } from '../pickup/pickup.model';
 import Bid from './bid.model';
 import { enqueueOutbidEmailNotification } from '../../queues/outbid-email.producer';
+import { emitAuctionBidUpdate } from '../../socket/notification.service';
 
 const addBid = async (email: string, payload: any) => {
   // Find user
@@ -133,6 +134,17 @@ const addBid = async (email: string, payload: any) => {
     newBidderName: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || 'Bidder',
     newBidAmount: amount,
     bidId: bid._id.toString(),
+  });
+
+  emitAuctionBidUpdate(auctionProduct.auctionId.toString(), {
+    auctionId: auctionProduct.auctionId.toString(),
+    auctionProductId: auctionProduct._id.toString(),
+    productId: auctionProduct.productId.toString(),
+    bidId: bid._id.toString(),
+    bidderId: user._id.toString(),
+    amount,
+    minimumNextBid: amount + auctionProduct.bidIncrement,
+    placedAt: new Date(),
   });
 
   return bid;

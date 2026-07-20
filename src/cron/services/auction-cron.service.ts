@@ -8,6 +8,13 @@ import invoiceService from '../../modules/invoice/invoice.service';
 import paymentService from '../../modules/payment/payment.service';
 import Product from '../../modules/product/product.model';
 import { User } from '../../modules/user/user.model';
+import Settings from '../../modules/settings/settings.model';
+import Bid from '../../modules/bid/bid.model';
+import { calculateAuctionInvoiceCharges } from '../../modules/invoice/invoice.utils';
+import {
+  createNotification,
+  emitAuctionStatusUpdate,
+} from '../../socket/notification.service';
 
 export interface IAuctionActivationResult {
   activatedCount: number;
@@ -96,6 +103,13 @@ const activateDueAuctions = async (): Promise<IAuctionActivationResult> => {
     message,
   );
 
+  auctions.forEach((auction) => {
+    emitAuctionStatusUpdate(auction._id.toString(), {
+      auctionId: auction._id.toString(),
+      status: 'active',
+    });
+  });
+
   return {
     activatedCount: auctionUpdate.modifiedCount,
     executionTimeMs,
@@ -168,6 +182,10 @@ const processAuction = async (auction: {
   const auctionProducts = await AuctionProduct.find({ auctionId: auction._id });
 
   await Auction.findByIdAndUpdate(auction._id, { status: 'ended' });
+  emitAuctionStatusUpdate(auctionId, {
+    auctionId,
+    status: 'ended',
+  });
 
   for (const auctionProduct of auctionProducts) {
     try {
@@ -235,6 +253,11 @@ const markUnsold = async (
     inventoryStatus: 'unsold',
   });
 
+  await notifyAuctionProductBidders(auctionProduct, {
+    type: 'auction_lost',
+    message: `Auction ended without a sale: ${reason}`,
+  });
+
   logger.info(
     {
       auctionProductId: auctionProduct._id.toString(),
@@ -249,6 +272,34 @@ const markUnsold = async (
     paymentStatus: auctionProduct.paymentStatus,
     message: reason,
   };
+};
+
+const notifyAuctionProductBidders = async (
+  auctionProduct: HydratedDocument<IAuctionProduct>,
+  params: {
+    type: string;
+    message: string;
+    excludeUserId?: string;
+  },
+) => {
+  const bidderIds = await Bid.distinct('bidderId', {
+    auctionProductId: auctionProduct._id,
+  });
+
+  const recipients = bidderIds.filter(
+    (bidderId) => bidderId && bidderId.toString() !== params.excludeUserId,
+  );
+
+  await Promise.all(
+    recipients.map((bidderId) =>
+      createNotification({
+        to: bidderId,
+        id: auctionProduct._id as Types.ObjectId,
+        type: params.type,
+        message: params.message,
+      }),
+    ),
+  );
 };
 
 const assignWinner = async (auctionProduct: HydratedDocument<IAuctionProduct>): Promise<void> => {
@@ -295,17 +346,39 @@ const processPayment = async (
     throw new AppError('Auction product base product not found', 404);
   }
 
+  const [auction, settings] = await Promise.all([
+    Auction.findById(auctionProduct.auctionId).select(
+      'title buyerPremiumEnabled buyerPremiumAmount',
+    ),
+    Settings.findOneAndUpdate(
+      { key: 'platform' },
+      { $setOnInsert: { key: 'platform' } },
+      { new: true, upsert: true },
+    ),
+  ]);
+
+  const charges = calculateAuctionInvoiceCharges({
+    winningBid: auctionProduct.highestBid.amount,
+    buyerPremiumEnabled: auction?.buyerPremiumEnabled,
+    buyerPremiumAmount: auction?.buyerPremiumAmount,
+    settings,
+  });
+
   try {
     const paymentIntent = await paymentService.chargeSavedPaymentMethod({
       customerId: winner.stripeCustomerId,
       paymentMethodId: winner.defaultPaymentMethodId,
-      amount: auctionProduct.highestBid.amount,
+      amount: charges.totalAmount,
       description: `Auction payment for ${product.title}`,
       metadata: {
         auctionProductId: auctionProduct._id.toString(),
         auctionId: auctionProduct.auctionId.toString(),
         productId: product._id.toString(),
         winnerId: winner._id.toString(),
+        subtotal: charges.subtotal.toString(),
+        buyerPremiumAmount: charges.buyerPremiumAmount.toString(),
+        salesTaxAmount: charges.salesTaxAmount.toString(),
+        totalAmount: charges.totalAmount.toString(),
       },
     });
 
@@ -314,7 +387,8 @@ const processPayment = async (
       productId: product._id.toString(),
       customerId: winner._id.toString(),
       inventoryId: product.inventoryId,
-      amount: auctionProduct.highestBid.amount,
+      amount: charges.totalAmount,
+      charges,
       stripePaymentIntentId: paymentIntent.id,
       productTitle: product.title,
     });
@@ -328,6 +402,26 @@ const processPayment = async (
     await Product.findByIdAndUpdate(product._id, {
       inventoryStatus: 'ready_for_pickup',
     });
+
+    await Promise.all([
+      createNotification({
+        to: new Types.ObjectId(winner._id.toString()),
+        id: auctionProduct._id as Types.ObjectId,
+        type: 'auction_won',
+        message: `You won ${product.title}. Payment was collected successfully.`,
+      }),
+      createNotification({
+        to: new Types.ObjectId(winner._id.toString()),
+        id: invoice._id as Types.ObjectId,
+        type: 'payment_success',
+        message: `Payment successful for ${product.title}: $${charges.totalAmount.toFixed(2)}.`,
+      }),
+      notifyAuctionProductBidders(auctionProduct, {
+        type: 'auction_lost',
+        message: `Auction ended for ${product.title}. Another bidder won.`,
+        excludeUserId: winner._id.toString(),
+      }),
+    ]);
 
     logger.info(
       {
@@ -362,7 +456,7 @@ const processPayment = async (
         auctionProductId: auctionProduct._id.toString(),
         auctionId: auctionProduct.auctionId.toString(),
         winnerId: winner._id.toString(),
-        amount: auctionProduct.highestBid.amount,
+        amount: charges.totalAmount,
         failureReason,
         productTitle: product.title,
       });
@@ -390,12 +484,20 @@ const processPayment = async (
       productId: product._id.toString(),
       customerId: winner._id.toString(),
       inventoryId: product.inventoryId,
-      amount: auctionProduct.highestBid.amount,
+      amount: charges.totalAmount,
+      charges,
       failureReason,
     });
 
     await Product.findByIdAndUpdate(product._id, {
       inventoryStatus: 'payment_pending',
+    });
+
+    await createNotification({
+      to: new Types.ObjectId(winner._id.toString()),
+      id: auctionProduct._id as Types.ObjectId,
+      type: 'payment_failed',
+      message: `Payment failed for ${product.title}. We will retry your saved payment method.`,
     });
 
     logger.error(

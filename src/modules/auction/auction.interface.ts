@@ -28,6 +28,8 @@ export interface IAuction {
   durationInDays: number;
   status: AuctionStatus;
   pickupSchedule?: IPickUpSchedule;
+  buyerPremiumEnabled: boolean;
+  buyerPremiumAmount: number;
   winner?: Types.ObjectId;
 }
 

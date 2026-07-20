@@ -8,6 +8,8 @@ import { AuctionStatus, IAuction, IDayAvailability } from './auction.interface';
 import { generateAuctionId } from '../../utils/product.utils';
 import AuctionProduct from '../AuctionProduct/AuctionProduct.model';
 import { PUBLIC_USER_SELECT } from '../user/user.utils';
+import auctionCronService from '../../cron/services/auction-cron.service';
+import { createNotification } from '../../socket/notification.service';
 
 const AUCTION_PUBLISHABLE_STATUSES = ['available', 'unsold'] as const;
 const LOCKING_AUCTION_PRODUCT_STATUSES = [
@@ -155,6 +157,12 @@ const createAuction = async (payload: any, email: string) => {
   endsAt.setDate(endsAt.getDate() + payload.auctionSchedule.durationInDays);
 
   const status = resolveAuctionStatus(startsAt, endsAt);
+  const buyerPremiumEnabled = Boolean(payload.buyerPremiumEnabled);
+  const buyerPremiumAmount = Number(payload.buyerPremiumAmount ?? 0);
+
+  if (buyerPremiumEnabled && (!Number.isFinite(buyerPremiumAmount) || buyerPremiumAmount < 0)) {
+    throw new AppError('Buyer premium amount must be a non-negative number', StatusCodes.BAD_REQUEST);
+  }
 
   const auction = await Auction.create({
     auctionId: await generateAuctionId(),
@@ -166,6 +174,8 @@ const createAuction = async (payload: any, email: string) => {
     durationInDays: payload.auctionSchedule.durationInDays,
     status,
     pickupSchedule: payload.pickupSchedule,
+    buyerPremiumEnabled,
+    buyerPremiumAmount: buyerPremiumEnabled ? buyerPremiumAmount : 0,
   });
 
   await AuctionProduct.insertMany(
@@ -192,6 +202,20 @@ const createAuction = async (payload: any, email: string) => {
 
   const populatedAuction = await auction.populate('products');
   const [auctionWithProductMetadata] = await addAuctionProductMetadata([populatedAuction]);
+
+  if (status === 'upcoming') {
+    const users = await User.find({ role: 'user', isBlocked: false, isSuspend: false }).select('_id');
+    await Promise.all(
+      users.map((user) =>
+        createNotification({
+          to: new Types.ObjectId(user._id.toString()),
+          id: auction._id as Types.ObjectId,
+          type: 'upcoming_auction',
+          message: `Upcoming auction scheduled: ${auction.title}`,
+        }),
+      ),
+    );
+  }
 
   return auctionWithProductMetadata;
 };
@@ -430,8 +454,53 @@ const getClosedAuctions = async (query: Record<string, unknown>) => {
   };
 };
 
-const updateAuction = async (id: string, data: Partial<IAuction>) => {};
-const cancelAuction = async (id: string) => {};
+const updateAuction = async (id: string, data: Partial<IAuction>) => {
+  const auction = await Auction.findByIdAndUpdate(id, data, {
+    new: true,
+    runValidators: true,
+  }).populate('products');
+
+  if (!auction) {
+    throw new AppError('Auction not found', StatusCodes.NOT_FOUND);
+  }
+
+  const [auctionWithProductMetadata] = await addAuctionProductMetadata([auction]);
+  return auctionWithProductMetadata;
+};
+
+const cancelAuction = async (id: string) => {
+  const auction = await Auction.findById(id);
+  if (!auction) {
+    throw new AppError('Auction not found', StatusCodes.NOT_FOUND);
+  }
+
+  if (['sold', 'payment_pending', 'payment_failed'].includes(auction.status)) {
+    throw new AppError('Auction cannot be cancelled after payment processing starts', StatusCodes.BAD_REQUEST);
+  }
+
+  auction.status = 'cancelled';
+  await auction.save();
+
+  await AuctionProduct.updateMany({ auctionId: auction._id }, { status: 'cancelled' });
+  await Product.updateMany({ _id: { $in: auction.products } }, { inventoryStatus: 'available' });
+
+  const populatedAuction = await auction.populate('products');
+  const [auctionWithProductMetadata] = await addAuctionProductMetadata([populatedAuction]);
+  return auctionWithProductMetadata;
+};
+
+const closeAuction = async (id: string) => {
+  const auction = await Auction.findById(id);
+  if (!auction) {
+    throw new AppError('Auction not found', StatusCodes.NOT_FOUND);
+  }
+
+  if (auction.status !== 'active') {
+    throw new AppError('Only active auctions can be closed manually', StatusCodes.BAD_REQUEST);
+  }
+
+  return auctionCronService.processAuction(auction);
+};
 
 const VALID_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -546,6 +615,7 @@ const auctionService = {
   getAuctionsByDay,
   updateAuction,
   cancelAuction,
+  closeAuction,
 };
 
 export default auctionService;

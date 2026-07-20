@@ -9,6 +9,14 @@ export interface IInvoice {
   customer: Types.ObjectId;
   inventoryId: string;
   amount: number;
+  subtotal: number;
+  buyerPremiumAmount: number;
+  salesTaxAmount: number;
+  taxableAmount: number;
+  totalAmount: number;
+  stateTaxRate: number;
+  stateTaxState?: string;
+  stateTaxLabel?: string;
   status: InvoiceStatus;
   stripePaymentIntentId?: string;
   pickupCode: string;

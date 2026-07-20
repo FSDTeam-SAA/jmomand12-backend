@@ -110,6 +110,18 @@ const cancelAuction = catchAsync(async (req, res) => {
   });
 });
 
+const closeAuction = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const result = await auctionService.closeAuction(id as string);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Auction closed successfully',
+    data: result,
+  });
+});
+
 const getAuctionsByDay = catchAsync(async (req, res) => {
   const { day } = req.query;
   const result = await auctionService.getAuctionsByDay(day as string | undefined);
@@ -135,6 +147,7 @@ const auctionController = {
   getAuctionsByDay,
   updateAuction,
   cancelAuction,
+  closeAuction,
 };
 
 export default auctionController;

@@ -4,4 +4,7 @@ export interface ISettings {
   storageFeePerDay: number;
   forfeitureDays: number;
   pickupInstructions?: string;
+  stateTaxRate: number;
+  stateTaxState?: string;
+  stateTaxLabel?: string;
 }
