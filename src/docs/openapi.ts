@@ -252,7 +252,36 @@ const openApiDocumentBase = {
             },
           },
         },
-        responses: { 200: success('Your profile has been updated successfully.') },
+        responses: {
+          200: success('Your profile has been updated successfully.'),
+          400: {
+            description: 'Invalid image format',
+            content: json({
+              success: false,
+              message: 'Invalid image format. Please upload a valid image file.',
+              statusCode: 400,
+              errorSource: [{ path: '', message: 'Invalid image format. Please upload a valid image file.' }],
+            }),
+          },
+          502: {
+            description: 'Image service temporarily unavailable',
+            content: json({
+              success: false,
+              message: 'Image service temporarily unavailable. Please try again later.',
+              statusCode: 502,
+              errorSource: [{ path: '', message: 'Image service temporarily unavailable. Please try again later.' }],
+            }),
+          },
+          500: {
+            description: 'Unable to upload image',
+            content: json({
+              success: false,
+              message: 'Unable to upload image. Please try again later.',
+              statusCode: 500,
+              errorSource: [{ path: '', message: 'Unable to upload image. Please try again later.' }],
+            }),
+          },
+        },
       },
     },
     '/users/admin-id': {
@@ -339,6 +368,33 @@ const openApiDocumentBase = {
         },
         responses: {
           200: success('New product created successfully', {}, { products: '/api/v1/products' }),
+          400: {
+            description: 'Invalid image format or missing required fields',
+            content: json({
+              success: false,
+              message: 'Invalid image format. Please upload a valid image file.',
+              statusCode: 400,
+              errorSource: [{ path: '', message: 'Invalid image format. Please upload a valid image file.' }],
+            }),
+          },
+          502: {
+            description: 'Image service temporarily unavailable',
+            content: json({
+              success: false,
+              message: 'Image service temporarily unavailable. Please try again later.',
+              statusCode: 502,
+              errorSource: [{ path: '', message: 'Image service temporarily unavailable. Please try again later.' }],
+            }),
+          },
+          500: {
+            description: 'Unable to upload image',
+            content: json({
+              success: false,
+              message: 'Unable to upload image. Please try again later.',
+              statusCode: 500,
+              errorSource: [{ path: '', message: 'Unable to upload image. Please try again later.' }],
+            }),
+          },
         },
       },
       get: {
@@ -601,14 +657,54 @@ const openApiDocumentBase = {
             },
           },
         },
-        responses: { 200: success('Product updated successfully') },
+        responses: {
+          200: success('Product updated successfully'),
+          400: {
+            description: 'Invalid image format',
+            content: json({
+              success: false,
+              message: 'Invalid image format. Please upload a valid image file.',
+              statusCode: 400,
+              errorSource: [{ path: '', message: 'Invalid image format. Please upload a valid image file.' }],
+            }),
+          },
+          502: {
+            description: 'Image service temporarily unavailable',
+            content: json({
+              success: false,
+              message: 'Image service temporarily unavailable. Please try again later.',
+              statusCode: 502,
+              errorSource: [{ path: '', message: 'Image service temporarily unavailable. Please try again later.' }],
+            }),
+          },
+          500: {
+            description: 'Unable to upload image',
+            content: json({
+              success: false,
+              message: 'Unable to upload image. Please try again later.',
+              statusCode: 500,
+              errorSource: [{ path: '', message: 'Unable to upload image. Please try again later.' }],
+            }),
+          },
+        },
       },
       delete: {
         tags: ['Products'],
         security: bearer,
         summary: 'Admin: soft-delete an inactive product and remove Cloudinary images',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: success('Product deleted successfully') },
+        responses: {
+          200: success('Product deleted successfully'),
+          500: {
+            description: 'Unable to delete image',
+            content: json({
+              success: false,
+              message: 'Unable to delete image.',
+              statusCode: 500,
+              errorSource: [{ path: '', message: 'Unable to delete image.' }],
+            }),
+          },
+        },
       },
     },
     '/category': {
@@ -629,7 +725,36 @@ const openApiDocumentBase = {
             },
           },
         },
-        responses: { 200: success('Category created successfully') },
+        responses: {
+          200: success('Category created successfully'),
+          400: {
+            description: 'Invalid image format',
+            content: json({
+              success: false,
+              message: 'Invalid image format. Please upload a valid image file.',
+              statusCode: 400,
+              errorSource: [{ path: '', message: 'Invalid image format. Please upload a valid image file.' }],
+            }),
+          },
+          502: {
+            description: 'Image service temporarily unavailable',
+            content: json({
+              success: false,
+              message: 'Image service temporarily unavailable. Please try again later.',
+              statusCode: 502,
+              errorSource: [{ path: '', message: 'Image service temporarily unavailable. Please try again later.' }],
+            }),
+          },
+          500: {
+            description: 'Unable to upload image',
+            content: json({
+              success: false,
+              message: 'Unable to upload image. Please try again later.',
+              statusCode: 500,
+              errorSource: [{ path: '', message: 'Unable to upload image. Please try again later.' }],
+            }),
+          },
+        },
       },
     },
     '/category/all': {
@@ -670,7 +795,36 @@ const openApiDocumentBase = {
             },
           },
         },
-        responses: { 200: success('Category updated successfully') },
+        responses: {
+          200: success('Category updated successfully'),
+          400: {
+            description: 'Invalid image format',
+            content: json({
+              success: false,
+              message: 'Invalid image format. Please upload a valid image file.',
+              statusCode: 400,
+              errorSource: [{ path: '', message: 'Invalid image format. Please upload a valid image file.' }],
+            }),
+          },
+          502: {
+            description: 'Image service temporarily unavailable',
+            content: json({
+              success: false,
+              message: 'Image service temporarily unavailable. Please try again later.',
+              statusCode: 502,
+              errorSource: [{ path: '', message: 'Image service temporarily unavailable. Please try again later.' }],
+            }),
+          },
+          500: {
+            description: 'Unable to upload image',
+            content: json({
+              success: false,
+              message: 'Unable to upload image. Please try again later.',
+              statusCode: 500,
+              errorSource: [{ path: '', message: 'Unable to upload image. Please try again later.' }],
+            }),
+          },
+        },
       },
     },
     '/category/toggle/{id}': {
