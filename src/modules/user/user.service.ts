@@ -119,7 +119,9 @@ const resendOtpCode = async (email: string) => {
 };
 
 const getAllUsers = async () => {
-  const result = await User.find().select('username firstName lastName email role image');
+  const result = await User.find().select(
+    'firstName lastName email role image isSuspend isBlocked isVerified hasDefaultPaymentMethod createdAt',
+  );
   return result;
 };
 
