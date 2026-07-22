@@ -15,6 +15,7 @@ import {
   createNotification,
   emitAuctionStatusUpdate,
 } from '../../socket/notification.service';
+import { enqueueWinnerEmailNotification } from '../../queues/winner-email.producer';
 
 export interface IAuctionActivationResult {
   activatedCount: number;
@@ -420,6 +421,12 @@ const processPayment = async (
         type: 'auction_lost',
         message: `Auction ended for ${product.title}. Another bidder won.`,
         excludeUserId: winner._id.toString(),
+      }),
+      enqueueWinnerEmailNotification({
+        auctionProductId: auctionProduct._id.toString(),
+        productId: product._id.toString(),
+        winnerId: winner._id.toString(),
+        winningBidAmount: auctionProduct.highestBid.amount,
       }),
     ]);
 

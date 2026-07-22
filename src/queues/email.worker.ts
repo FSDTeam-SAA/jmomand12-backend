@@ -2,11 +2,14 @@ import { Job, Worker } from 'bullmq';
 import logger from '../logger';
 import sendEmail from '../utils/sendEmail';
 import outbidEmailTemplate from '../utils/outbidEmailTemplate';
+import winnerEmailTemplate from '../utils/winnerEmailTemplate';
 import {
   EMAIL_QUEUE_NAME,
   EmailJobData,
   OUTBID_EMAIL_JOB,
+  WINNER_EMAIL_JOB,
   OutbidEmailJobData,
+  WinnerEmailJobData,
 } from './email.queue';
 import { addEmailDeadLetterJob } from './email.dlq';
 import { redisConnection } from './redis.connection';
@@ -14,22 +17,37 @@ import { redisConnection } from './redis.connection';
 let emailWorker: Worker<EmailJobData> | null = null;
 
 const processEmailJob = async (job: Job<EmailJobData>) => {
-  if (job.name !== OUTBID_EMAIL_JOB) {
-    throw new Error(`Unsupported email job type: ${job.name}`);
+  if (job.name === OUTBID_EMAIL_JOB) {
+    const data = job.data as OutbidEmailJobData;
+    const result = await sendEmail({
+      to: data.previousBidderEmail,
+      subject: `You have been outbid on ${data.productTitle}`,
+      html: outbidEmailTemplate(data),
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || 'Email provider failed to send the outbid email');
+    }
+
+    return { sentTo: data.previousBidderEmail };
   }
 
-  const data = job.data as OutbidEmailJobData;
-  const result = await sendEmail({
-    to: data.previousBidderEmail,
-    subject: `You have been outbid on ${data.productTitle}`,
-    html: outbidEmailTemplate(data),
-  });
+  if (job.name === WINNER_EMAIL_JOB) {
+    const data = job.data as WinnerEmailJobData;
+    const result = await sendEmail({
+      to: data.winnerEmail,
+      subject: `Congratulations! You won ${data.productTitle}`,
+      html: winnerEmailTemplate(data),
+    });
 
-  if (!result.success) {
-    throw new Error(result.error || 'Email provider failed to send the outbid email');
+    if (!result.success) {
+      throw new Error(result.error || 'Email provider failed to send the winner email');
+    }
+
+    return { sentTo: data.winnerEmail };
   }
 
-  return { sentTo: data.previousBidderEmail };
+  throw new Error(`Unsupported email job type: ${job.name}`);
 };
 
 export const initializeEmailWorker = () => {

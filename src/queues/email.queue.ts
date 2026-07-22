@@ -4,6 +4,7 @@ import { redisConnection } from './redis.connection';
 export const EMAIL_QUEUE_NAME = 'email';
 export const EMAIL_DLQ_NAME = 'email-dlq';
 export const OUTBID_EMAIL_JOB = 'auction.outbid.email';
+export const WINNER_EMAIL_JOB = 'auction.winner.email';
 
 export interface OutbidEmailJobData {
   auctionProductId: string;
@@ -19,7 +20,18 @@ export interface OutbidEmailJobData {
   frontendUrl: string;
 }
 
-export type EmailJobData = OutbidEmailJobData;
+export interface WinnerEmailJobData {
+  auctionProductId: string;
+  productId: string;
+  productTitle: string;
+  winnerId: string;
+  winnerEmail: string;
+  winnerName: string;
+  winningBidAmount: number;
+  frontendUrl: string;
+}
+
+export type EmailJobData = OutbidEmailJobData | WinnerEmailJobData;
 
 export const emailQueue = new Queue<EmailJobData>(EMAIL_QUEUE_NAME, {
   connection: redisConnection,
