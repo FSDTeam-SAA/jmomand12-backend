@@ -14,6 +14,17 @@ const getRevenueSummary = catchAsync(async (req, res) => {
   });
 });
 
+const getRevenueChart = catchAsync(async (req, res) => {
+  const result = await reportService.getRevenueChart(req.query);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Revenue chart fetched successfully',
+    data: result,
+  });
+});
+
 const getAuctionSummary = catchAsync(async (req, res) => {
   const result = await reportService.getAuctionSummary(req.query);
 
@@ -49,6 +60,7 @@ const getInventorySummary = catchAsync(async (_req, res) => {
 
 const reportController = {
   getRevenueSummary,
+  getRevenueChart,
   getAuctionSummary,
   getPickupSummary,
   getInventorySummary,
