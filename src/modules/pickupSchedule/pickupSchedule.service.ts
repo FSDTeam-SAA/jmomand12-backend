@@ -3,6 +3,7 @@ import AppError from '../../errors/AppError';
 import Auction from '../auction/auction.model';
 import PickupSchedule from './pickupSchedule.model';
 import AuctionProduct from '../AuctionProduct/AuctionProduct.model';
+import { User } from '../user/user.model';
 
 const getAuctionPickupSchedule = async (auctionId: string) => {
   const auction = await Auction.findById(auctionId);
@@ -139,10 +140,33 @@ const getAllPickupSchedules = async () => {
     })
     .sort({ createdAt: -1 });
 };
+
+const getMyRequestForPickupProduct = async (email: string) => {
+  // Find the user by email
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    throw new AppError('User not found', StatusCodes.NOT_FOUND);
+  }
+
+  return await PickupSchedule.find({ userId: user._id })
+    .populate('userId', 'name email')
+    .populate('auctionId', 'auctionId title status')
+    .populate({
+      path: 'auctionProductId',
+      populate: {
+        path: 'productId',
+        select: 'title inventoryId',
+      },
+    })
+    .sort({ createdAt: -1 });
+};
+
 const pickupScheduleService = {
   getAuctionPickupSchedule,
   requestForPickupSchedule,
   getAllPickupSchedules,
+  getMyRequestForPickupProduct,
 };
 
 export default pickupScheduleService;

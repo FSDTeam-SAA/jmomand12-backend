@@ -37,10 +37,23 @@ const getAllPickupSchedules = catchAsync(async (req, res) => {
   });
 });
 
+const getMyRequestForPickupProduct = catchAsync(async (req, res) => {
+  const { email } = req.user;
+  const result = await pickupScheduleService.getMyRequestForPickupProduct(email);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'My pickup requests retrieved successfully.',
+    data: result,
+  });
+});
+
 const pickupScheduleController = {
   getAuctionPickupSchedule,
   requestForPickupSchedule,
   getAllPickupSchedules,
+  getMyRequestForPickupProduct,
 };
 
 export default pickupScheduleController;
