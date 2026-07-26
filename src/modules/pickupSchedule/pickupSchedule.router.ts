@@ -14,6 +14,7 @@ router.get(
 );
 
 router.get('/:auctionId', pickupScheduleController.getAuctionPickupSchedule);
+router.patch('/:id/status', pickupScheduleController.updatePickupScheduleStatus);
 
 const pickupScheduleRouter = router;
 export default pickupScheduleRouter;

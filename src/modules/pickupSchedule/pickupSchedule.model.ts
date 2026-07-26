@@ -19,7 +19,7 @@ const PickupScheduleSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ['requested', 'approved', 'rejected', 'not_requested'],
+      enum: ['requested', 'approved', 'rejected', 'not_requested', 'completed', 'cancelled'],
       default: 'not_requested',
     },
     pickupDate: {
