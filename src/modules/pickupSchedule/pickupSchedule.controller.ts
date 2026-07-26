@@ -49,11 +49,29 @@ const getMyRequestForPickupProduct = catchAsync(async (req, res) => {
   });
 });
 
+const updatePickupScheduleStatus = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const result = await pickupScheduleService.updatePickupScheduleStatus(
+    id as string,
+    status as string,
+  );
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Schedule updated successfully.',
+    data: result,
+  });
+});
+
 const pickupScheduleController = {
   getAuctionPickupSchedule,
   requestForPickupSchedule,
   getAllPickupSchedules,
   getMyRequestForPickupProduct,
+  updatePickupScheduleStatus,
 };
 
 export default pickupScheduleController;

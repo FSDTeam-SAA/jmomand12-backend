@@ -129,13 +129,13 @@ const requestForPickupSchedule = async ({
 
 const getAllPickupSchedules = async () => {
   return await PickupSchedule.find()
-    .populate('userId', 'name email')
+    .populate('userId', 'firstName lastName email image')
     .populate('auctionId', 'auctionId title status')
     .populate({
       path: 'auctionProductId',
       populate: {
         path: 'productId',
-        select: 'title inventoryId',
+        select: 'title inventoryId images',
       },
     })
     .sort({ createdAt: -1 });
@@ -150,7 +150,7 @@ const getMyRequestForPickupProduct = async (email: string) => {
   }
 
   return await PickupSchedule.find({ userId: user._id })
-    .populate('userId', 'name email')
+    .populate('userId', 'firstName lastName email image')
     .populate('auctionId', 'auctionId title status')
     .populate({
       path: 'auctionProductId',
@@ -162,11 +162,30 @@ const getMyRequestForPickupProduct = async (email: string) => {
     .sort({ createdAt: -1 });
 };
 
+const updatePickupScheduleStatus = async (id: string, status: string) => {
+  const schedule = await PickupSchedule.findById(id);
+
+  if (!schedule) {
+    throw new AppError('Pickup schedule not found.', StatusCodes.NOT_FOUND);
+  }
+
+  // Prevent moving back to Requested after Approval
+  if (schedule.status === 'approved' && status === 'requested') {
+    throw new AppError(
+      'Approved requests cannot be changed back to Requested.',
+      StatusCodes.BAD_REQUEST,
+    );
+  }
+
+  return await PickupSchedule.findByIdAndUpdate(id, { status }, { new: true });
+};
+
 const pickupScheduleService = {
   getAuctionPickupSchedule,
   requestForPickupSchedule,
   getAllPickupSchedules,
   getMyRequestForPickupProduct,
+  updatePickupScheduleStatus,
 };
 
 export default pickupScheduleService;
