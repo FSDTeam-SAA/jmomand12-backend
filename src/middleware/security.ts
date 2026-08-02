@@ -7,10 +7,19 @@ import config from "../config";
 
 const corsOptions: cors.CorsOptions = {
   origin(origin, callback) {
-    callback(null, true);
+    if (!origin) {
+      return callback(null, true);
+    }
+    const allowed = config.cors.allowedOrigins;
+    if (allowed.includes('*') || allowed.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, false);
   },
-  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Range'],
+  exposedHeaders: ['Content-Range', 'X-Total-Count'],
 };
 
 
