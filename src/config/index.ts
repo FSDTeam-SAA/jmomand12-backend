@@ -51,6 +51,25 @@ export default {
     AES_KEY: process.env.AES_KEY,
     AES_IV: process.env.AES_IV,
   },
+  cors: {
+    allowedOrigins: process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(',').map((origin) => origin.trim())
+      : [
+          'https://www.discountdealsdmv.com',
+          'https://discountdealsdmv.com',
+          'https://admin.discountdealsdmv.com',
+          'http://localhost:3000',
+          'https://localhost:3000',
+          'http://localhost:3001',
+          'https://localhost:3001',
+          'http://localhost:5173',
+          'http://localhost:5174',
+          'http://127.0.0.1:3000',
+          'http://127.0.0.1:3001',
+          'http://127.0.0.1:5173',
+          'http://127.0.0.1:5174',
+        ],
+  },
   cron: {
     enabled: process.env.CRON_ENABLED !== 'false',
   },

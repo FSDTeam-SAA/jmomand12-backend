@@ -39,12 +39,16 @@ const openApiDocumentBase = {
   },
   servers: [
     {
-      url: '/api/v1',
-      description: 'Current server',
+      url: 'https://api.discountdealsdmv.com/api/v1',
+      description: 'Production API (HTTPS)',
     },
     {
       url: 'http://localhost:5000/api/v1',
-      description: 'Local development',
+      description: 'Local Development Server (Port 5000)',
+    },
+    {
+      url: '/api/v1',
+      description: 'Relative Path (Current Domain)',
     },
   ],
   tags: [
