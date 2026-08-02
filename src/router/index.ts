@@ -16,6 +16,7 @@ import bidRouter from '../modules/bid/bid.router';
 import cartRouter from '../modules/cart/cart.router';
 import orderRouter from '../modules/order/order.router';
 import newsletterRouter from '../modules/newsletter/newsletter.router';
+import pickupScheduleRouter from '../modules/pickupSchedule/pickupSchedule.router';
 
 const router = Router();
 
@@ -51,6 +52,10 @@ const moduleRoutes = [
   {
     path: '/newsletters',
     route: newsletterRouter,
+  },
+  {
+    path: '/pickup-schedules',
+    route: pickupScheduleRouter,
   },
 ];
 

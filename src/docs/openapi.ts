@@ -52,21 +52,55 @@ const openApiDocumentBase = {
     },
   ],
   tags: [
-    { name: 'Auth', description: 'Authentication, token refresh, OTP, and password management APIs.' },
-    { name: 'Users', description: 'Customer registration, profile, email verification, and admin user management APIs.' },
-    { name: 'Products', description: 'Inventory product, media upload, detail, update, delete, and monitoring APIs.' },
+    {
+      name: 'Auth',
+      description: 'Authentication, token refresh, OTP, and password management APIs.',
+    },
+    {
+      name: 'Users',
+      description:
+        'Customer registration, profile, email verification, and admin user management APIs.',
+    },
+    {
+      name: 'Products',
+      description: 'Inventory product, media upload, detail, update, delete, and monitoring APIs.',
+    },
     { name: 'Categories', description: 'Product category CRUD APIs.' },
     { name: 'Auctions', description: 'Auction scheduling, listing, and detail APIs.' },
     { name: 'Auction Products', description: 'Products associated with a specific auction.' },
-    { name: 'Bids', description: 'Bid placement APIs. Users must have a default saved payment method before placing bids.' },
-    { name: 'Payments', description: 'Stripe saved-card setup, default payment method, test-card helper, webhook receiver, and automatic payment retry APIs. Supports 3 retry attempts with exponential backoff for failed payments.' },
-    { name: 'Invoices', description: 'Customer invoice, admin invoice, and pickup QR/code verification APIs.' },
-    { name: 'Pickups', description: 'Pickup slot, ready invoice, appointment scheduling, and completion APIs.' },
-    { name: 'Reports', description: 'Admin revenue, auction, pickup, and inventory analytics APIs.' },
-    { name: 'Settings', description: 'Platform pickup policy, storage fee, and public settings APIs.' },
+    {
+      name: 'Bids',
+      description:
+        'Bid placement APIs. Users must have a default saved payment method before placing bids.',
+    },
+    {
+      name: 'Payments',
+      description:
+        'Stripe saved-card setup, default payment method, test-card helper, webhook receiver, and automatic payment retry APIs. Supports 3 retry attempts with exponential backoff for failed payments.',
+    },
+    {
+      name: 'Invoices',
+      description: 'Customer invoice, admin invoice, and pickup QR/code verification APIs.',
+    },
+    {
+      name: 'Pickups',
+      description: 'Pickup slot, ready invoice, appointment scheduling, and completion APIs.',
+    },
+    {
+      name: 'Reports',
+      description: 'Admin revenue, auction, pickup, and inventory analytics APIs.',
+    },
+    {
+      name: 'Settings',
+      description: 'Platform pickup policy, storage fee, and public settings APIs.',
+    },
     { name: 'Contacts', description: 'Public contact message APIs.' },
     { name: 'Notifications', description: 'Admin notification listing and read-state APIs.' },
-    { name: 'Orders', description: 'Cart checkout, Stripe webhook processing, customer order history, and admin order management.' },
+    {
+      name: 'Orders',
+      description:
+        'Cart checkout, Stripe webhook processing, customer order history, and admin order management.',
+    },
   ],
   components: {
     securitySchemes: {
@@ -229,7 +263,11 @@ const openApiDocumentBase = {
         security: bearer,
         summary: 'Get own profile',
         responses: {
-          200: success('Your profile has been retrieved successfully.', {}, { update: '/api/v1/users/me' }),
+          200: success(
+            'Your profile has been retrieved successfully.',
+            {},
+            { update: '/api/v1/users/me' },
+          ),
         },
       },
       patch: {
@@ -264,7 +302,9 @@ const openApiDocumentBase = {
               success: false,
               message: 'Invalid image format. Please upload a valid image file.',
               statusCode: 400,
-              errorSource: [{ path: '', message: 'Invalid image format. Please upload a valid image file.' }],
+              errorSource: [
+                { path: '', message: 'Invalid image format. Please upload a valid image file.' },
+              ],
             }),
           },
           502: {
@@ -273,7 +313,12 @@ const openApiDocumentBase = {
               success: false,
               message: 'Image service temporarily unavailable. Please try again later.',
               statusCode: 502,
-              errorSource: [{ path: '', message: 'Image service temporarily unavailable. Please try again later.' }],
+              errorSource: [
+                {
+                  path: '',
+                  message: 'Image service temporarily unavailable. Please try again later.',
+                },
+              ],
             }),
           },
           500: {
@@ -282,7 +327,9 @@ const openApiDocumentBase = {
               success: false,
               message: 'Unable to upload image. Please try again later.',
               statusCode: 500,
-              errorSource: [{ path: '', message: 'Unable to upload image. Please try again later.' }],
+              errorSource: [
+                { path: '', message: 'Unable to upload image. Please try again later.' },
+              ],
             }),
           },
         },
@@ -341,26 +388,58 @@ const openApiDocumentBase = {
                   category: { type: 'string', example: 'Music' },
                   condition: {
                     type: 'string',
-                    enum: ['new', 'open_box', 'like_new', 'used', 'damaged', 'for_parts', 'brand_new', 'like_new_open_box', 'scratch_and_dent', 'salvage'],
+                    enum: [
+                      'new',
+                      'open_box',
+                      'like_new',
+                      'used',
+                      'damaged',
+                      'for_parts',
+                      'brand_new',
+                      'like_new_open_box',
+                      'scratch_and_dent',
+                      'salvage',
+                    ],
                     example: 'used',
                   },
                   type: {
                     type: 'string',
                     enum: ['for_sale', 'for_auction'],
                     example: 'for_auction',
-                    description: 'Product type: for_auction requires day + reservePrice; for_sale requires price + quantity',
+                    description:
+                      'Product type: for_auction requires day + reservePrice; for_sale requires price + quantity',
                   },
-                  day: { type: 'string', example: 'Monday', description: 'Required when type is for_auction' },
-                  reservePrice: { type: 'number', example: 150, description: 'Required when type is for_auction' },
-                  price: { type: 'number', example: 499, description: 'Required when type is for_sale' },
-                  quantity: { type: 'number', example: 10, description: 'Required when type is for_sale' },
+                  day: {
+                    type: 'string',
+                    example: 'Monday',
+                    description: 'Required when type is for_auction',
+                  },
+                  reservePrice: {
+                    type: 'number',
+                    example: 150,
+                    description: 'Required when type is for_auction',
+                  },
+                  price: {
+                    type: 'number',
+                    example: 499,
+                    description: 'Required when type is for_sale',
+                  },
+                  quantity: {
+                    type: 'number',
+                    example: 10,
+                    description: 'Required when type is for_sale',
+                  },
                   color: {
                     type: 'array',
                     items: { type: 'string' },
                     example: ['Black', 'Blue'],
                     description: 'Optional array of colors',
                   },
-                  manufacturer: { type: 'string', example: 'Fender', description: 'Optional manufacturer name' },
+                  manufacturer: {
+                    type: 'string',
+                    example: 'Fender',
+                    description: 'Optional manufacturer name',
+                  },
                   images: {
                     type: 'array',
                     items: { type: 'string', format: 'binary' },
@@ -378,7 +457,9 @@ const openApiDocumentBase = {
               success: false,
               message: 'Invalid image format. Please upload a valid image file.',
               statusCode: 400,
-              errorSource: [{ path: '', message: 'Invalid image format. Please upload a valid image file.' }],
+              errorSource: [
+                { path: '', message: 'Invalid image format. Please upload a valid image file.' },
+              ],
             }),
           },
           502: {
@@ -387,7 +468,12 @@ const openApiDocumentBase = {
               success: false,
               message: 'Image service temporarily unavailable. Please try again later.',
               statusCode: 502,
-              errorSource: [{ path: '', message: 'Image service temporarily unavailable. Please try again later.' }],
+              errorSource: [
+                {
+                  path: '',
+                  message: 'Image service temporarily unavailable. Please try again later.',
+                },
+              ],
             }),
           },
           500: {
@@ -396,7 +482,9 @@ const openApiDocumentBase = {
               success: false,
               message: 'Unable to upload image. Please try again later.',
               statusCode: 500,
-              errorSource: [{ path: '', message: 'Unable to upload image. Please try again later.' }],
+              errorSource: [
+                { path: '', message: 'Unable to upload image. Please try again later.' },
+              ],
             }),
           },
         },
@@ -405,18 +493,99 @@ const openApiDocumentBase = {
         tags: ['Products'],
         summary: 'List products with search, filter, and pagination',
         parameters: [
-          { name: 'searchTerm', in: 'query', schema: { type: 'string' }, description: 'Search by title, description, or category (case-insensitive)' },
-          { name: 'category', in: 'query', schema: { type: 'string' }, description: 'Filter by exact category name' },
-          { name: 'condition', in: 'query', schema: { type: 'string', enum: ['new', 'open_box', 'like_new', 'used', 'damaged', 'for_parts', 'brand_new', 'like_new_open_box', 'scratch_and_dent', 'salvage'] }, description: 'Filter by product condition' },
-          { name: 'inventoryStatus', in: 'query', schema: { type: 'string' }, description: 'Filter by inventory status' },
-          { name: 'type', in: 'query', schema: { type: 'string', enum: ['for_sale', 'for_auction'] }, description: 'Filter by product type' },
-          { name: 'minPrice', in: 'query', schema: { type: 'number' }, description: 'Minimum price filter' },
-          { name: 'maxPrice', in: 'query', schema: { type: 'number' }, description: 'Maximum price filter' },
-          { name: 'priceRange', in: 'query', schema: { type: 'string', enum: ['under_100', '100_500', '500_1000', '1000_5000', '5000_plus'] }, description: 'Predefined price range bucket' },
-          { name: 'status', in: 'query', schema: { type: 'string', enum: ['buy_now', 'live_auction', 'ending_soon', 'upcoming_auction'] }, description: 'Cross-collection auction status filter' },
-          { name: 'fields', in: 'query', schema: { type: 'string' }, description: 'Comma-separated list of fields to include in response (e.g. title,category,price)' },
-          { name: 'sortBy', in: 'query', schema: { type: 'string', default: 'createdAt' }, description: 'Field to sort by' },
-          { name: 'sortOrder', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' }, description: 'Sort direction' },
+          {
+            name: 'searchTerm',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Search by title, description, or category (case-insensitive)',
+          },
+          {
+            name: 'category',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Filter by exact category name',
+          },
+          {
+            name: 'condition',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: [
+                'new',
+                'open_box',
+                'like_new',
+                'used',
+                'damaged',
+                'for_parts',
+                'brand_new',
+                'like_new_open_box',
+                'scratch_and_dent',
+                'salvage',
+              ],
+            },
+            description: 'Filter by product condition',
+          },
+          {
+            name: 'inventoryStatus',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Filter by inventory status',
+          },
+          {
+            name: 'type',
+            in: 'query',
+            schema: { type: 'string', enum: ['for_sale', 'for_auction'] },
+            description: 'Filter by product type',
+          },
+          {
+            name: 'minPrice',
+            in: 'query',
+            schema: { type: 'number' },
+            description: 'Minimum price filter',
+          },
+          {
+            name: 'maxPrice',
+            in: 'query',
+            schema: { type: 'number' },
+            description: 'Maximum price filter',
+          },
+          {
+            name: 'priceRange',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['under_100', '100_500', '500_1000', '1000_5000', '5000_plus'],
+            },
+            description: 'Predefined price range bucket',
+          },
+          {
+            name: 'status',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['buy_now', 'live_auction', 'ending_soon', 'upcoming_auction'],
+            },
+            description: 'Cross-collection auction status filter',
+          },
+          {
+            name: 'fields',
+            in: 'query',
+            schema: { type: 'string' },
+            description:
+              'Comma-separated list of fields to include in response (e.g. title,category,price)',
+          },
+          {
+            name: 'sortBy',
+            in: 'query',
+            schema: { type: 'string', default: 'createdAt' },
+            description: 'Field to sort by',
+          },
+          {
+            name: 'sortOrder',
+            in: 'query',
+            schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
+            description: 'Sort direction',
+          },
           { name: 'page', in: 'query', schema: { type: 'number', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'number', default: 10 } },
         ],
@@ -432,44 +601,114 @@ const openApiDocumentBase = {
           'price range filtering, and current bid range filtering via AuctionProduct join. ' +
           'Status and condition accept comma-separated values for multi-select.',
         parameters: [
-          { name: 'searchTerm', in: 'query', schema: { type: 'string' }, description: 'Search by title, description, or category (case-insensitive)' },
-          { name: 'category', in: 'query', schema: { type: 'string' }, description: 'Filter by exact category name' },
-          { name: 'condition', in: 'query', schema: { type: 'string' }, description: 'Filter by condition. Comma-separated for multi-select (e.g. brand_new,salvage)' },
-          { name: 'type', in: 'query', schema: { type: 'string', enum: ['for_sale', 'for_auction'] }, description: 'Filter by product type' },
-          { name: 'priceRange', in: 'query', schema: { type: 'string', enum: ['under_100', '100_500', '500_1000', '1000_5000', '5000_plus'] }, description: 'Predefined price range bucket' },
-          { name: 'minPrice', in: 'query', schema: { type: 'number' }, description: 'Minimum retail price' },
-          { name: 'maxPrice', in: 'query', schema: { type: 'number' }, description: 'Maximum retail price' },
-          { name: 'status', in: 'query', schema: { type: 'string', enum: ['buy_now', 'live_auction', 'ending_soon', 'upcoming_auction'] }, description: 'Auction status filter. Comma-separated for multi-select (e.g. live_auction,ending_soon)' },
-          { name: 'minBid', in: 'query', schema: { type: 'number' }, description: 'Minimum current bid amount' },
-          { name: 'maxBid', in: 'query', schema: { type: 'number' }, description: 'Maximum current bid amount' },
-          { name: 'sortBy', in: 'query', schema: { type: 'string', default: 'createdAt' }, description: 'Field to sort by' },
-          { name: 'sortOrder', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' }, description: 'Sort direction' },
+          {
+            name: 'searchTerm',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Search by title, description, or category (case-insensitive)',
+          },
+          {
+            name: 'category',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Filter by exact category name',
+          },
+          {
+            name: 'condition',
+            in: 'query',
+            schema: { type: 'string' },
+            description:
+              'Filter by condition. Comma-separated for multi-select (e.g. brand_new,salvage)',
+          },
+          {
+            name: 'type',
+            in: 'query',
+            schema: { type: 'string', enum: ['for_sale', 'for_auction'] },
+            description: 'Filter by product type',
+          },
+          {
+            name: 'priceRange',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['under_100', '100_500', '500_1000', '1000_5000', '5000_plus'],
+            },
+            description: 'Predefined price range bucket',
+          },
+          {
+            name: 'minPrice',
+            in: 'query',
+            schema: { type: 'number' },
+            description: 'Minimum retail price',
+          },
+          {
+            name: 'maxPrice',
+            in: 'query',
+            schema: { type: 'number' },
+            description: 'Maximum retail price',
+          },
+          {
+            name: 'status',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['buy_now', 'live_auction', 'ending_soon', 'upcoming_auction'],
+            },
+            description:
+              'Auction status filter. Comma-separated for multi-select (e.g. live_auction,ending_soon)',
+          },
+          {
+            name: 'minBid',
+            in: 'query',
+            schema: { type: 'number' },
+            description: 'Minimum current bid amount',
+          },
+          {
+            name: 'maxBid',
+            in: 'query',
+            schema: { type: 'number' },
+            description: 'Maximum current bid amount',
+          },
+          {
+            name: 'sortBy',
+            in: 'query',
+            schema: { type: 'string', default: 'createdAt' },
+            description: 'Field to sort by',
+          },
+          {
+            name: 'sortOrder',
+            in: 'query',
+            schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
+            description: 'Sort direction',
+          },
           { name: 'page', in: 'query', schema: { type: 'number', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'number', default: 10 } },
         ],
         responses: {
-          200: success(
-            'Products browsed successfully',
-            {
-              meta: { page: 1, limit: 10, total: 50, totalPage: 5 },
-              data: [
-                {
-                  inventoryId: 'PRD-000134-07-26',
-                  title: 'Samsung Galaxy S24',
-                  description: 'Unlocked Samsung Galaxy S24, 128GB, phantom black',
-                  category: 'Mobile',
-                  condition: 'like_new_open_box',
-                  images: [{ public_id: 'products/galaxy-s24_abc', url: 'https://res.cloudinary.com/demo/image/upload/v1/products/galaxy-s24_abc.jpg' }],
-                  color: ['Black', 'Green'],
-                  type: 'for_sale',
-                  quantity: 3,
-                  price: 599,
-                  manufacturer: 'Samsung',
-                  inventoryStatus: 'available',
-                },
-              ],
-            },
-          ),
+          200: success('Products browsed successfully', {
+            meta: { page: 1, limit: 10, total: 50, totalPage: 5 },
+            data: [
+              {
+                inventoryId: 'PRD-000134-07-26',
+                title: 'Samsung Galaxy S24',
+                description: 'Unlocked Samsung Galaxy S24, 128GB, phantom black',
+                category: 'Mobile',
+                condition: 'like_new_open_box',
+                images: [
+                  {
+                    public_id: 'products/galaxy-s24_abc',
+                    url: 'https://res.cloudinary.com/demo/image/upload/v1/products/galaxy-s24_abc.jpg',
+                  },
+                ],
+                color: ['Black', 'Green'],
+                type: 'for_sale',
+                quantity: 3,
+                price: 599,
+                manufacturer: 'Samsung',
+                inventoryStatus: 'available',
+              },
+            ],
+          }),
         },
       },
     },
@@ -481,7 +720,7 @@ const openApiDocumentBase = {
         description:
           'Upload a ZIP archive containing a `products.csv` file and an `imageFolder/` directory with product images. ' +
           'The CSV columns are: title, description, category, day, condition, reservePrice, color, imageFolder. ' +
-          'Each row\'s imageFolder value must match a subdirectory name inside imageFolder/ in the ZIP. ' +
+          "Each row's imageFolder value must match a subdirectory name inside imageFolder/ in the ZIP. " +
           'The `type` field determines whether all products in the batch are created as auction or sale items.',
         requestBody: {
           required: true,
@@ -491,11 +730,16 @@ const openApiDocumentBase = {
                 type: 'object',
                 required: ['file', 'type'],
                 properties: {
-                  file: { type: 'string', format: 'binary', description: 'ZIP file containing products.csv and imageFolder/' },
+                  file: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'ZIP file containing products.csv and imageFolder/',
+                  },
                   type: {
                     type: 'string',
                     enum: ['for_sale', 'for_auction'],
-                    description: 'Product type for all items in the bulk upload. for_auction supports optional day and reservePrice; for_sale requires price and quantity.',
+                    description:
+                      'Product type for all items in the bulk upload. for_auction supports optional day and reservePrice; for_sale requires price and quantity.',
                   },
                 },
               },
@@ -503,20 +747,26 @@ const openApiDocumentBase = {
           },
         },
         responses: {
-          200: success(
-            'Bulk product upload processed',
-            {
-              totalProcessed: 10,
-              totalSucceeded: 8,
-              totalFailed: 2,
-              success: [
-                { row: 1, title: 'Apple iPhone 15 Pro', inventoryId: 'PRD-000001-07-26', productId: '64f1...' },
-              ],
-              failed: [
-                { row: 5, title: 'Sony WH-1000XM5', error: 'Image folder "sony-wh1000xm5" not found' },
-              ],
-            },
-          ),
+          200: success('Bulk product upload processed', {
+            totalProcessed: 10,
+            totalSucceeded: 8,
+            totalFailed: 2,
+            success: [
+              {
+                row: 1,
+                title: 'Apple iPhone 15 Pro',
+                inventoryId: 'PRD-000001-07-26',
+                productId: '64f1...',
+              },
+            ],
+            failed: [
+              {
+                row: 5,
+                title: 'Sony WH-1000XM5',
+                error: 'Image folder "sony-wh1000xm5" not found',
+              },
+            ],
+          }),
         },
       },
     },
@@ -529,13 +779,62 @@ const openApiDocumentBase = {
           'Returns a paginated list of all products with full details including price, images, manufacturer, and inventory status. ' +
           'Use the type query parameter to filter by for_sale or for_auction.',
         parameters: [
-          { name: 'searchTerm', in: 'query', schema: { type: 'string' }, description: 'Search by title or category (case-insensitive)' },
-          { name: 'productType', in: 'query', schema: { type: 'string', enum: ['for_sale', 'for_auction'] }, description: 'Filter by product type' },
-          { name: 'category', in: 'query', schema: { type: 'string' }, description: 'Filter by exact category name' },
-          { name: 'condition', in: 'query', schema: { type: 'string', enum: ['new', 'open_box', 'like_new', 'used', 'damaged', 'for_parts', 'brand_new', 'like_new_open_box', 'scratch_and_dent', 'salvage'] }, description: 'Filter by product condition' },
-          { name: 'inventoryStatus', in: 'query', schema: { type: 'string' }, description: 'Filter by inventory status (e.g. available, auction_active)' },
-          { name: 'sortBy', in: 'query', schema: { type: 'string', default: 'createdAt' }, description: 'Field to sort by' },
-          { name: 'sortOrder', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' }, description: 'Sort direction' },
+          {
+            name: 'searchTerm',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Search by title or category (case-insensitive)',
+          },
+          {
+            name: 'productType',
+            in: 'query',
+            schema: { type: 'string', enum: ['for_sale', 'for_auction'] },
+            description: 'Filter by product type',
+          },
+          {
+            name: 'category',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Filter by exact category name',
+          },
+          {
+            name: 'condition',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: [
+                'new',
+                'open_box',
+                'like_new',
+                'used',
+                'damaged',
+                'for_parts',
+                'brand_new',
+                'like_new_open_box',
+                'scratch_and_dent',
+                'salvage',
+              ],
+            },
+            description: 'Filter by product condition',
+          },
+          {
+            name: 'inventoryStatus',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Filter by inventory status (e.g. available, auction_active)',
+          },
+          {
+            name: 'sortBy',
+            in: 'query',
+            schema: { type: 'string', default: 'createdAt' },
+            description: 'Field to sort by',
+          },
+          {
+            name: 'sortOrder',
+            in: 'query',
+            schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
+            description: 'Sort direction',
+          },
           { name: 'page', in: 'query', schema: { type: 'number', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'number', default: 10 } },
         ],
@@ -549,7 +848,12 @@ const openApiDocumentBase = {
                 description: 'Unlocked Samsung Galaxy S24, 128GB, phantom black',
                 category: 'Mobile',
                 condition: 'like_new',
-                images: [{ public_id: 'products/galaxy-s24_abc', url: 'https://res.cloudinary.com/demo/image/upload/v1/products/galaxy-s24_abc.jpg' }],
+                images: [
+                  {
+                    public_id: 'products/galaxy-s24_abc',
+                    url: 'https://res.cloudinary.com/demo/image/upload/v1/products/galaxy-s24_abc.jpg',
+                  },
+                ],
                 color: ['Black', 'Green'],
                 type: 'for_sale',
                 quantity: 3,
@@ -573,12 +877,56 @@ const openApiDocumentBase = {
           'Each item includes inventoryId, title, category, condition, and price (retail view). ' +
           'Use inventoryStatus to intentionally inspect products in another state.',
         parameters: [
-          { name: 'searchTerm', in: 'query', schema: { type: 'string' }, description: 'Search by title or category (case-insensitive)' },
-          { name: 'category', in: 'query', schema: { type: 'string' }, description: 'Filter by exact category name' },
-          { name: 'condition', in: 'query', schema: { type: 'string', enum: ['new', 'open_box', 'like_new', 'used', 'damaged', 'for_parts', 'brand_new', 'like_new_open_box', 'scratch_and_dent', 'salvage'] }, description: 'Filter by product condition' },
-          { name: 'inventoryStatus', in: 'query', schema: { type: 'string' }, description: 'Filter by inventory status (e.g. available, auction_active)' },
-          { name: 'sortBy', in: 'query', schema: { type: 'string', default: 'createdAt' }, description: 'Field to sort by' },
-          { name: 'sortOrder', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' }, description: 'Sort direction' },
+          {
+            name: 'searchTerm',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Search by title or category (case-insensitive)',
+          },
+          {
+            name: 'category',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Filter by exact category name',
+          },
+          {
+            name: 'condition',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: [
+                'new',
+                'open_box',
+                'like_new',
+                'used',
+                'damaged',
+                'for_parts',
+                'brand_new',
+                'like_new_open_box',
+                'scratch_and_dent',
+                'salvage',
+              ],
+            },
+            description: 'Filter by product condition',
+          },
+          {
+            name: 'inventoryStatus',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Filter by inventory status (e.g. available, auction_active)',
+          },
+          {
+            name: 'sortBy',
+            in: 'query',
+            schema: { type: 'string', default: 'createdAt' },
+            description: 'Field to sort by',
+          },
+          {
+            name: 'sortOrder',
+            in: 'query',
+            schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
+            description: 'Sort direction',
+          },
           { name: 'page', in: 'query', schema: { type: 'number', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'number', default: 10 } },
         ],
@@ -607,7 +955,12 @@ const openApiDocumentBase = {
         parameters: [
           { name: 'inventoryStatus', in: 'query', schema: { type: 'string' } },
           { name: 'category', in: 'query', schema: { type: 'string' } },
-          { name: 'searchTerm', in: 'query', schema: { type: 'string' }, description: 'Search by title, inventoryId, or category (case-insensitive)' },
+          {
+            name: 'searchTerm',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Search by title, inventoryId, or category (case-insensitive)',
+          },
         ],
         responses: { 200: success('Inventory monitoring fetched successfully') },
       },
@@ -618,7 +971,11 @@ const openApiDocumentBase = {
         summary: 'Get product details by ID',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: {
-          200: success('Product details fetched successfully', {}, { auctions: '/api/v1/auctions' }),
+          200: success(
+            'Product details fetched successfully',
+            {},
+            { auctions: '/api/v1/auctions' },
+          ),
         },
       },
       patch: {
@@ -638,12 +995,24 @@ const openApiDocumentBase = {
                   category: { type: 'string', example: 'Music' },
                   condition: {
                     type: 'string',
-                    enum: ['new', 'open_box', 'like_new', 'used', 'damaged', 'for_parts', 'brand_new', 'like_new_open_box', 'scratch_and_dent', 'salvage'],
+                    enum: [
+                      'new',
+                      'open_box',
+                      'like_new',
+                      'used',
+                      'damaged',
+                      'for_parts',
+                      'brand_new',
+                      'like_new_open_box',
+                      'scratch_and_dent',
+                      'salvage',
+                    ],
                   },
                   type: {
                     type: 'string',
                     enum: ['for_sale', 'for_auction'],
-                    description: 'Product type: for_auction requires day + reservePrice; for_sale requires price + quantity',
+                    description:
+                      'Product type: for_auction requires day + reservePrice; for_sale requires price + quantity',
                   },
                   day: { type: 'string', example: 'Monday' },
                   reservePrice: { type: 'number', example: 150 },
@@ -653,7 +1022,20 @@ const openApiDocumentBase = {
                   manufacturer: { type: 'string', example: 'Fender' },
                   inventoryStatus: {
                     type: 'string',
-                    enum: ['available', 'auction_active', 'auction_ended', 'winner_assigned', 'payment_pending', 'payment_completed', 'ready_for_pickup', 'pickup_scheduled', 'picked_up', 'completed', 'unsold', 'unavailable'],
+                    enum: [
+                      'available',
+                      'auction_active',
+                      'auction_ended',
+                      'winner_assigned',
+                      'payment_pending',
+                      'payment_completed',
+                      'ready_for_pickup',
+                      'pickup_scheduled',
+                      'picked_up',
+                      'completed',
+                      'unsold',
+                      'unavailable',
+                    ],
                   },
                   images: { type: 'array', items: { type: 'string', format: 'binary' } },
                 },
@@ -669,7 +1051,9 @@ const openApiDocumentBase = {
               success: false,
               message: 'Invalid image format. Please upload a valid image file.',
               statusCode: 400,
-              errorSource: [{ path: '', message: 'Invalid image format. Please upload a valid image file.' }],
+              errorSource: [
+                { path: '', message: 'Invalid image format. Please upload a valid image file.' },
+              ],
             }),
           },
           502: {
@@ -678,7 +1062,12 @@ const openApiDocumentBase = {
               success: false,
               message: 'Image service temporarily unavailable. Please try again later.',
               statusCode: 502,
-              errorSource: [{ path: '', message: 'Image service temporarily unavailable. Please try again later.' }],
+              errorSource: [
+                {
+                  path: '',
+                  message: 'Image service temporarily unavailable. Please try again later.',
+                },
+              ],
             }),
           },
           500: {
@@ -687,7 +1076,9 @@ const openApiDocumentBase = {
               success: false,
               message: 'Unable to upload image. Please try again later.',
               statusCode: 500,
-              errorSource: [{ path: '', message: 'Unable to upload image. Please try again later.' }],
+              errorSource: [
+                { path: '', message: 'Unable to upload image. Please try again later.' },
+              ],
             }),
           },
         },
@@ -737,7 +1128,9 @@ const openApiDocumentBase = {
               success: false,
               message: 'Invalid image format. Please upload a valid image file.',
               statusCode: 400,
-              errorSource: [{ path: '', message: 'Invalid image format. Please upload a valid image file.' }],
+              errorSource: [
+                { path: '', message: 'Invalid image format. Please upload a valid image file.' },
+              ],
             }),
           },
           502: {
@@ -746,7 +1139,12 @@ const openApiDocumentBase = {
               success: false,
               message: 'Image service temporarily unavailable. Please try again later.',
               statusCode: 502,
-              errorSource: [{ path: '', message: 'Image service temporarily unavailable. Please try again later.' }],
+              errorSource: [
+                {
+                  path: '',
+                  message: 'Image service temporarily unavailable. Please try again later.',
+                },
+              ],
             }),
           },
           500: {
@@ -755,7 +1153,9 @@ const openApiDocumentBase = {
               success: false,
               message: 'Unable to upload image. Please try again later.',
               statusCode: 500,
-              errorSource: [{ path: '', message: 'Unable to upload image. Please try again later.' }],
+              errorSource: [
+                { path: '', message: 'Unable to upload image. Please try again later.' },
+              ],
             }),
           },
         },
@@ -807,7 +1207,9 @@ const openApiDocumentBase = {
               success: false,
               message: 'Invalid image format. Please upload a valid image file.',
               statusCode: 400,
-              errorSource: [{ path: '', message: 'Invalid image format. Please upload a valid image file.' }],
+              errorSource: [
+                { path: '', message: 'Invalid image format. Please upload a valid image file.' },
+              ],
             }),
           },
           502: {
@@ -816,7 +1218,12 @@ const openApiDocumentBase = {
               success: false,
               message: 'Image service temporarily unavailable. Please try again later.',
               statusCode: 502,
-              errorSource: [{ path: '', message: 'Image service temporarily unavailable. Please try again later.' }],
+              errorSource: [
+                {
+                  path: '',
+                  message: 'Image service temporarily unavailable. Please try again later.',
+                },
+              ],
             }),
           },
           500: {
@@ -825,7 +1232,9 @@ const openApiDocumentBase = {
               success: false,
               message: 'Unable to upload image. Please try again later.',
               statusCode: 500,
-              errorSource: [{ path: '', message: 'Unable to upload image. Please try again later.' }],
+              errorSource: [
+                { path: '', message: 'Unable to upload image. Please try again later.' },
+              ],
             }),
           },
         },
@@ -880,9 +1289,24 @@ const openApiDocumentBase = {
         summary: 'List all auctions with optional status filter and pagination',
         parameters: [
           { name: 'status', in: 'query', schema: { type: 'string' } },
-          { name: 'searchTerm', in: 'query', schema: { type: 'string' }, description: 'Search by auctionId or title (case-insensitive)' },
-          { name: 'sortBy', in: 'query', schema: { type: 'string', default: 'startsAt' }, description: 'Field to sort by' },
-          { name: 'sortOrder', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' }, description: 'Sort direction' },
+          {
+            name: 'searchTerm',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Search by auctionId or title (case-insensitive)',
+          },
+          {
+            name: 'sortBy',
+            in: 'query',
+            schema: { type: 'string', default: 'startsAt' },
+            description: 'Field to sort by',
+          },
+          {
+            name: 'sortOrder',
+            in: 'query',
+            schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
+            description: 'Sort direction',
+          },
           { name: 'page', in: 'query', schema: { type: 'number', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'number', default: 10 } },
         ],
@@ -942,8 +1366,7 @@ const openApiDocumentBase = {
       get: {
         tags: ['Auctions'],
         summary: 'Get ended auctions',
-        description:
-          'Returns auctions with status ended, sorted by most recently closed first.',
+        description: 'Returns auctions with status ended, sorted by most recently closed first.',
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'number', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'number', default: 10 } },
@@ -981,22 +1404,20 @@ const openApiDocumentBase = {
               type: 'string',
               enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
             },
-            description: 'Day name to fetch auctions for. Case-insensitive. When provided, the response includes auction products with bid details.',
+            description:
+              'Day name to fetch auctions for. Case-insensitive. When provided, the response includes auction products with bid details.',
           },
         ],
         responses: {
-          200: success(
-            'Available days fetched successfully',
-            {
-              availableDays: [
-                { day: 'Monday', date: '2026-07-20', auctionCount: 3 },
-                { day: 'Tuesday', date: '2026-07-21', auctionCount: 1 },
-                { day: 'Thursday', date: '2026-07-23', auctionCount: 5 },
-              ],
-              selectedDay: null,
-              auctions: null,
-            },
-          ),
+          200: success('Available days fetched successfully', {
+            availableDays: [
+              { day: 'Monday', date: '2026-07-20', auctionCount: 3 },
+              { day: 'Tuesday', date: '2026-07-21', auctionCount: 1 },
+              { day: 'Thursday', date: '2026-07-23', auctionCount: 5 },
+            ],
+            selectedDay: null,
+            auctions: null,
+          }),
         },
       },
     },
@@ -1006,7 +1427,11 @@ const openApiDocumentBase = {
         summary: 'Get auction details by ID with populated products',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: {
-          200: success('Auction details fetched successfully', {}, { products: '/api/v1/auction-products/{id}' }),
+          200: success(
+            'Auction details fetched successfully',
+            {},
+            { products: '/api/v1/auction-products/{id}' },
+          ),
         },
       },
     },
@@ -1033,7 +1458,11 @@ const openApiDocumentBase = {
           }),
         },
         responses: {
-          200: success('Bid placed successfully', {}, { savePaymentMethod: '/api/v1/payments/setup-intents' }),
+          200: success(
+            'Bid placed successfully',
+            {},
+            { savePaymentMethod: '/api/v1/payments/setup-intents' },
+          ),
           400: {
             description: 'User has no default payment method or bid validation failed',
             content: json({
@@ -1198,10 +1627,16 @@ const openApiDocumentBase = {
           },
         ],
         responses: {
-          200: success('Webhook received and processed', { received: true, eventType: 'payment_intent.succeeded' }),
+          200: success('Webhook received and processed', {
+            received: true,
+            eventType: 'payment_intent.succeeded',
+          }),
           400: {
             description: 'Invalid signature or missing webhook secret',
-            content: json({ success: false, message: 'Webhook Error: signature verification failed' }),
+            content: json({
+              success: false,
+              message: 'Webhook Error: signature verification failed',
+            }),
           },
         },
       },
@@ -1231,7 +1666,11 @@ const openApiDocumentBase = {
         summary: 'Admin: verify a pickup QR token or pickup code',
         requestBody: { required: true, content: json({ tokenOrCode: 'A1B2C3D4' }) },
         responses: {
-          200: success('Pickup token verified successfully', {}, { completePickup: '/api/v1/pickups/complete' }),
+          200: success(
+            'Pickup token verified successfully',
+            {},
+            { completePickup: '/api/v1/pickups/complete' },
+          ),
         },
       },
     },
@@ -1280,7 +1719,10 @@ const openApiDocumentBase = {
         summary: 'Customer: schedule a pickup appointment for paid invoices',
         requestBody: {
           required: true,
-          content: json({ slotId: 'pickupSlotObjectId', invoiceIds: ['invoiceObjectId1', 'invoiceObjectId2'] }),
+          content: json({
+            slotId: 'pickupSlotObjectId',
+            invoiceIds: ['invoiceObjectId1', 'invoiceObjectId2'],
+          }),
         },
         responses: { 200: success('Pickup scheduled successfully') },
       },
@@ -1306,7 +1748,11 @@ const openApiDocumentBase = {
         summary: 'Admin: complete warehouse handover by pickup code',
         requestBody: {
           required: true,
-          content: json({ appointmentId: 'pickupAppointmentObjectId', pickupCode: 'A1B2C3D4', notes: 'Customer picked up all items.' }),
+          content: json({
+            appointmentId: 'pickupAppointmentObjectId',
+            pickupCode: 'A1B2C3D4',
+            notes: 'Customer picked up all items.',
+          }),
         },
         responses: { 200: success('Pickup completed successfully') },
       },
@@ -1338,6 +1784,24 @@ const openApiDocumentBase = {
           { name: 'endDate', in: 'query', schema: { type: 'string', format: 'date' } },
         ],
         responses: { 200: success('Revenue report fetched successfully') },
+      },
+    },
+    '/reports/revenue/chart': {
+      get: {
+        tags: ['Reports'],
+        security: bearer,
+        summary: 'Admin: get revenue chart data for week or month',
+        parameters: [
+          {
+            name: 'period',
+            in: 'query',
+            schema: { type: 'string', enum: ['week', 'month'] },
+            description: 'Chart period: week (default) or month',
+          },
+          { name: 'startDate', in: 'query', schema: { type: 'string', format: 'date' } },
+          { name: 'endDate', in: 'query', schema: { type: 'string', format: 'date' } },
+        ],
+        responses: { 200: success('Revenue chart fetched successfully') },
       },
     },
     '/reports/auctions': {
@@ -1436,10 +1900,11 @@ const openApiDocumentBase = {
         tags: ['Orders'],
         security: bearer,
         summary: 'Start cart checkout session',
-        description: 'Validates cart products and stock, creates a pending order, and returns a Stripe Checkout Session URL.',
+        description:
+          'Validates cart products and stock, creates a pending order, and returns a Stripe Checkout Session URL.',
         responses: {
           200: success('Stripe checkout session created successfully', {
-            checkoutUrl: 'https://checkout.stripe.com/c/pay/cs_test_...'
+            checkoutUrl: 'https://checkout.stripe.com/c/pay/cs_test_...',
           }),
           400: errorResponse,
         },
@@ -1449,10 +1914,11 @@ const openApiDocumentBase = {
       post: {
         tags: ['Orders'],
         summary: 'Stripe webhook receiver for orders',
-        description: 'Processes checkout.session.completed webhook events to mark orders as paid, deduct stock, and clear customer carts.',
+        description:
+          'Processes checkout.session.completed webhook events to mark orders as paid, deduct stock, and clear customer carts.',
         responses: {
           200: success('Webhook processed successfully', {
-            success: true
+            success: true,
           }),
           400: errorResponse,
         },
@@ -1462,21 +1928,21 @@ const openApiDocumentBase = {
       get: {
         tags: ['Orders'],
         security: bearer,
-        summary: 'Retrieve logged-in user\'s orders',
+        summary: "Retrieve logged-in user's orders",
         responses: {
           200: success('Your orders retrieved successfully', [
             {
               orderNumber: 'ORD-2026-1001',
-              totalAmount: 150.00,
+              totalAmount: 150.0,
               status: 'paid',
               items: [
                 {
                   product: { title: 'Sample Product' },
                   quantity: 1,
-                  price: 150.00
-                }
-              ]
-            }
+                  price: 150.0,
+                },
+              ],
+            },
           ]),
         },
       },
@@ -1491,16 +1957,16 @@ const openApiDocumentBase = {
             {
               orderNumber: 'ORD-2026-1001',
               customer: { firstName: 'John', lastName: 'Doe', email: 'john@example.com' },
-              totalAmount: 150.00,
+              totalAmount: 150.0,
               status: 'paid',
               items: [
                 {
                   product: { title: 'Sample Product' },
                   quantity: 1,
-                  price: 150.00
-                }
-              ]
-            }
+                  price: 150.0,
+                },
+              ],
+            },
           ]),
         },
       },
@@ -1535,7 +2001,8 @@ const detailOpenApiOperations = (document: typeof openApiDocumentBase) => {
       operationDetails.operationId = operationDetails.operationId || operationId;
       operationDetails['x-api-name'] = `${tag} API - ${summary}`;
       operationDetails.description =
-        operationDetails.description || `${tag} API - ${summary}. Endpoint: ${method.toUpperCase()} ${fullPath}.`;
+        operationDetails.description ||
+        `${tag} API - ${summary}. Endpoint: ${method.toUpperCase()} ${fullPath}.`;
     });
   });
 
