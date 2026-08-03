@@ -130,6 +130,10 @@ const productSchema = new Schema<IProduct>(
       type: Number,
       min: 1,
     },
+    retailPrice: {
+      type: Number,
+      min: 1,
+    },
     manufacturer: {
       type: String,
       trim: true,
@@ -144,6 +148,8 @@ const productSchema = new Schema<IProduct>(
   {
     timestamps: true,
     versionKey: false,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   },
 );
 
@@ -156,9 +162,26 @@ productSchema.pre('validate', function (next) {
     if (this.quantity == null || this.quantity <= 0) {
       return next(new Error('Quantity is required for sale products'));
     }
+
+    if (this.retailPrice != null && this.retailPrice < this.price) {
+      return next(new Error('Retail price must be greater than or equal to price'));
+    }
   }
 
   next();
+});
+
+productSchema.virtual('discountPercentage').get(function () {
+  if (
+    this.type !== 'for_sale' ||
+    this.retailPrice == null ||
+    this.price == null ||
+    this.retailPrice <= 0
+  ) {
+    return undefined;
+  }
+
+  return Number((((this.retailPrice - this.price) / this.retailPrice) * 100).toFixed(2));
 });
 
 const Product = model<IProduct>('Product', productSchema);

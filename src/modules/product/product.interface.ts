@@ -43,6 +43,8 @@ export interface IProduct {
   type: 'for_sale' | 'for_auction';
   quantity?: number;
   price?: number;
+  retailPrice?: number;
+  discountPercentage?: number;
   manufacturer?: string;
   totalReview: number;
   averageReview: number;

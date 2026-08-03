@@ -34,6 +34,28 @@ const PRICE_RANGES: Record<string, { min?: number; max?: number }> = {
 
 const AUCTION_PRODUCT_STATUSES = ['live_auction', 'ending_soon', 'upcoming_auction'] as const;
 
+const validateRetailPrice = (
+  type: IProduct['type'],
+  price: unknown,
+  retailPrice: unknown,
+) => {
+  if (type !== 'for_sale' || retailPrice == null) return;
+
+  const numericRetailPrice = Number(retailPrice);
+  const numericPrice = Number(price);
+
+  if (!Number.isFinite(numericRetailPrice) || numericRetailPrice <= 0) {
+    throw new AppError('Retail price must be a positive number', StatusCodes.BAD_REQUEST);
+  }
+
+  if (Number.isFinite(numericPrice) && numericRetailPrice < numericPrice) {
+    throw new AppError(
+      'Retail price must be greater than or equal to price',
+      StatusCodes.BAD_REQUEST,
+    );
+  }
+};
+
 const createProduct = async (
   payload: Partial<IProduct>,
   email: string,
@@ -67,6 +89,8 @@ const createProduct = async (
     if (payload.quantity == null || payload.quantity <= 0) {
       throw new AppError('Quantity is required', StatusCodes.BAD_REQUEST);
     }
+
+    validateRetailPrice(payload.type, payload.price, payload.retailPrice);
   }
 
   // Upload Product Images
@@ -689,6 +713,12 @@ const updateProduct = async (
     throw new AppError('Product not found', StatusCodes.NOT_FOUND);
   }
 
+  validateRetailPrice(
+    payload.type || product.type,
+    payload.price ?? product.price,
+    payload.retailPrice ?? product.retailPrice,
+  );
+
   // Upload new images
   if (files?.length) {
     const uploadedImages = await Promise.all(
@@ -763,6 +793,7 @@ const getInventoryProducts = async (query: Record<string, unknown>) => {
     condition,
     inventoryStatus,
     type,
+    productType,
     sortBy = 'createdAt',
     sortOrder = 'desc',
     page = 1,
@@ -790,8 +821,8 @@ const getInventoryProducts = async (query: Record<string, unknown>) => {
     filter.inventoryStatus = inventoryStatus;
   }
 
-  if (type) {
-    filter.type = type;
+  if (type || productType) {
+    filter.type = type || productType;
   }
 
   const pageNumber = Number(page);
@@ -807,7 +838,7 @@ const getInventoryProducts = async (query: Record<string, unknown>) => {
     .skip(skip)
     .limit(limitNumber)
     .select(
-      'inventoryId title description category condition images color type quantity price reservePrice day manufacturer inventoryStatus',
+      'inventoryId title description category condition images color type quantity price retailPrice reservePrice day manufacturer inventoryStatus',
     );
 
   const total = await Product.countDocuments(filter);
@@ -823,7 +854,7 @@ const getInventoryProducts = async (query: Record<string, unknown>) => {
   };
 };
 
-const getAuctionProducts = async (query: Record<string, unknown>) => {
+const getAuctionProducts = async (query: Record<string, unknown> )=> {
   const {
     searchTerm,
     category,
@@ -935,6 +966,26 @@ const browseProducts = async (query: Record<string, unknown>) => {
   // Type filter
   if (type && typeof type === 'string') {
     filter.type = type;
+  }
+
+  // The public browse endpoint must never expose auction inventory before it
+  // has been published through the auction creation flow. A product becomes
+  // publicly visible as an auction only after it belongs to an upcoming or
+  // active Auction document.
+  if (!status) {
+    const publishedAuctionProductIds = await Auction.distinct('products', {
+      status: { $in: ['upcoming', 'active'] },
+    });
+
+    filter.$and = [
+      ...(filter.$and || []),
+      {
+        $or: [
+          { type: 'for_sale', inventoryStatus: 'available' },
+          { type: 'for_auction', _id: { $in: publishedAuctionProductIds } },
+        ],
+      },
+    ];
   }
 
   // Price Range Filter
@@ -1096,7 +1147,6 @@ const getAllCategory = async () => {
       },
     },
   ]);
-
   return categories;
 };
 
