@@ -25,7 +25,7 @@ export const emailDlq = new Queue<EmailDeadLetterJobData>(EMAIL_DLQ_NAME, {
 
 export const addEmailDeadLetterJob = async (data: EmailDeadLetterJobData) => {
   await emailDlq.add('email.dead-letter', data, {
-    jobId: data.originalJobId ? `dlq:${data.originalJobId}` : undefined,
+    jobId: data.originalJobId ? `dlq_${data.originalJobId.replace(/:/g, '_')}` : undefined,
     attempts: 1,
     removeOnComplete: false,
     removeOnFail: false,

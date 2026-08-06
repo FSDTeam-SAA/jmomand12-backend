@@ -36,7 +36,7 @@ export const enqueueWinnerEmailNotification = async ({
       return;
     }
 
-    const jobId = `winner-email:${auctionProductId}:${winnerId}`;
+    const jobId = `winner-email_${auctionProductId}_${winnerId}`;
 
     await emailQueue.add(
       WINNER_EMAIL_JOB,
