@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import QRCode from 'qrcode';
+import { Types } from 'mongoose';
 import { StatusCodes } from 'http-status-codes';
 import config from '../../config';
 import AppError from '../../errors/AppError';
@@ -95,9 +96,9 @@ const createPaidInvoice = async (params: {
 
   const invoice = await Invoice.create({
     invoiceNumber: await generateInvoiceNumber(),
-    auction: params.auctionId,
-    product: params.productId,
-    customer: params.customerId,
+    auction: new Types.ObjectId(params.auctionId),
+    product: new Types.ObjectId(params.productId),
+    customer: new Types.ObjectId(params.customerId),
     inventoryId: params.inventoryId,
     amount: charges.totalAmount,
     subtotal: charges.subtotal,
@@ -151,9 +152,9 @@ const createFailedPaymentInvoice = async (params: {
 
   return Invoice.create({
     invoiceNumber: await generateInvoiceNumber(),
-    auction: params.auctionId,
-    product: params.productId,
-    customer: params.customerId,
+    auction: new Types.ObjectId(params.auctionId),
+    product: new Types.ObjectId(params.productId),
+    customer: new Types.ObjectId(params.customerId),
     inventoryId: params.inventoryId,
     amount: charges.totalAmount,
     subtotal: charges.subtotal,
