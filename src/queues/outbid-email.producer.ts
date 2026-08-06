@@ -48,7 +48,7 @@ export const enqueueOutbidEmailNotification = async ({
       return;
     }
 
-    const jobId = `outbid-email:${auctionProductId}:${previousBidderId}:${bidId}`;
+    const jobId = `outbid-email_${auctionProductId}_${previousBidderId}_${bidId}`;
 
     await emailQueue.add(
       OUTBID_EMAIL_JOB,
@@ -67,7 +67,15 @@ export const enqueueOutbidEmailNotification = async ({
       },
       outbidEmailJobOptions(jobId),
     );
-  } catch (error) {
-    logger.error({ error, auctionProductId, previousBidderId }, 'Failed to enqueue outbid email');
+  } catch (error: any) {
+    logger.error(
+      {
+        errorMessage: error?.message || String(error),
+        stack: error?.stack,
+        auctionProductId,
+        previousBidderId,
+      },
+      'Failed to enqueue outbid email',
+    );
   }
 };
