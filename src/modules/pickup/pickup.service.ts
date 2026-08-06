@@ -62,7 +62,7 @@ const getMyReadyInvoices = async (email: string) => {
   return Invoice.find({
     customer: user._id,
     status: 'paid',
-    _id: { $nin: scheduledInvoiceIds },
+    _id: { $nin: scheduledInvoiceIds.map((id) => new Types.ObjectId(id)) },
   })
     .populate('product')
     .sort({ paidAt: -1 });
