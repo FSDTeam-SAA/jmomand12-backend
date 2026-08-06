@@ -17,7 +17,7 @@ const formatCurrency = (amount: number) =>
 
 const outbidEmailTemplate = (data: OutbidEmailJobData): string => {
   const frontendUrl = data.frontendUrl.replace(/\/$/, '');
-  const productUrl = `${frontendUrl}/auction-products/${data.auctionProductId}`;
+  const productUrl = `${frontendUrl}/auction-details/${data.auctionProductId}`;
   const bidderName = escapeHtml(data.previousBidderName);
   const newBidderName = escapeHtml(data.newBidderName);
   const productTitle = escapeHtml(data.productTitle);
