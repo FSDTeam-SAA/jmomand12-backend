@@ -27,6 +27,7 @@ const moduleRoutes = [
   { path: '/products', route: productRouter },
   { path: '/category', route: categoryRouter },
   { path: '/auctions', route: auctionRouter },
+  { path: '/payment', route: paymentRouter },
   { path: '/payments', route: paymentRouter },
   { path: '/invoices', route: invoiceRouter },
   { path: '/pickups', route: pickupRouter },

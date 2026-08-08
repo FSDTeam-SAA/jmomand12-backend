@@ -1,4 +1,3 @@
-import { apiReference } from "@scalar/express-api-reference";
 import cookieParser from "cookie-parser";
 import express, { Application } from "express";
 import { openApiDocument } from "./docs/openapi";
@@ -20,25 +19,29 @@ app.get("/openapi.json", (_req, res) => {
   res.json(openApiDocument);
 });
 
-app.use(
-  "/api-docs",
-  apiReference({
-    spec: {
-      content: openApiDocument,
-    },
-    theme: "purple",
-    metaData: {
-      title: "Discount Deals DMV API Reference",
-      description: "Interactive API documentation for Discount Deals DMV Platform",
-    },
-    showSidebar: true,
-    hideModels: false,
-    defaultHttpClient: {
-      targetKey: "javascript",
-      clientKey: "fetch",
-    },
-  })
-);
+app.use("/api-docs", async (req, res, next) => {
+  try {
+    const { apiReference } = await import("@scalar/express-api-reference");
+    return (apiReference({
+      spec: {
+        content: openApiDocument,
+      },
+      theme: "purple",
+      metaData: {
+        title: "Discount Deals DMV API Reference",
+        description: "Interactive API documentation for Discount Deals DMV Platform",
+      },
+      showSidebar: true,
+      hideModels: false,
+      defaultHttpClient: {
+        targetKey: "javascript",
+        clientKey: "fetch",
+      },
+    }) as any)(req, res, next);
+  } catch (error) {
+    next(error);
+  }
+});
 
 app.use("/api/v1", router);
 

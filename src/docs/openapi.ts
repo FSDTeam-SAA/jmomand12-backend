@@ -1591,6 +1591,35 @@ const openApiDocumentBase = {
         },
       },
     },
+    '/payment/weebhook': {
+      post: {
+        tags: ['Payments'],
+        summary: 'Stripe webhook receiver for payment events (Exact custom endpoint)',
+        description:
+          'Handles asynchronous Stripe events including checkout session completions and payment intents. Requires Stripe webhook signature verification via stripe-signature header.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { type: 'object' },
+            },
+          },
+        },
+        responses: {
+          200: success('Webhook received and processed', {
+            received: true,
+            eventType: 'checkout.session.completed',
+          }),
+          400: {
+            description: 'Invalid signature or missing webhook secret',
+            content: json({
+              success: false,
+              message: 'Webhook Error: signature verification failed',
+            }),
+          },
+        },
+      },
+    },
     '/payments/webhook': {
       post: {
         tags: ['Payments'],
