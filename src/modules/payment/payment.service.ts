@@ -16,22 +16,7 @@ type AdminPaymentRow = {
   amount: number;
 };
 
-const isProbablyPlaceholderKey = (key?: string) => {
-  if (!key) return true;
-
-  return (
-    key.includes('your_') ||
-    key.includes('****************') ||
-    key.endsWith('_key') ||
-    !/^sk_(test|live)_[A-Za-z0-9]/.test(key)
-  );
-};
-
-const stripe = !isProbablyPlaceholderKey(config.stripe.secretKey)
-  ? new Stripe(config.stripe.secretKey as string, {
-      apiVersion: '2025-08-27.basil',
-    })
-  : null;
+import { getStripe } from '../../utils/stripe.utils';
 
 const isStripeTestMode = () => config.stripe.secretKey?.startsWith('sk_test_') === true;
 
@@ -39,16 +24,7 @@ const getTestHelperStatus = () => ({
   enabled: config.NODE_ENV === 'development',
 });
 
-const requireStripe = () => {
-  if (!stripe) {
-    throw new AppError(
-      'Stripe is not configured with a valid secret key. Add a real STRIPE_SECRET_KEY in .env and restart the server.',
-      StatusCodes.BAD_GATEWAY,
-    );
-  }
-
-  return stripe;
-};
+const requireStripe = () => getStripe();
 
 const handleStripeError = (error: any): never => {
   if (error?.type === 'StripeAuthenticationError') {

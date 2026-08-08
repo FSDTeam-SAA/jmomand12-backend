@@ -4,6 +4,7 @@ import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
 import paymentService from './payment.service';
 import orderService from '../order/order.service';
+import { constructWebhookEvent } from '../../utils/stripe.utils';
 import config from '../../config';
 import Stripe from 'stripe';
 
@@ -81,25 +82,17 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
   const signature = req.headers['stripe-signature'] as string;
   const body = (req as any).rawBody;
 
-  if (!signature || !body || !config.stripe.webhookSecret) {
+  if (!signature || !body) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
-      message: 'Missing webhook signature, raw body, or webhook secret not configured',
+      message: 'Missing Stripe webhook signature or raw body payload',
     });
   }
 
   let event: Stripe.Event;
 
   try {
-    const stripe = new Stripe(config.stripe.secretKey as string, {
-      apiVersion: '2025-08-27.basil',
-    });
-
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      config.stripe.webhookSecret as string,
-    );
+    event = constructWebhookEvent(body, signature);
   } catch (error: any) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
@@ -109,12 +102,14 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
 
   // Handle different webhook events
   try {
+    let result: any = null;
+
     if (event.type === 'checkout.session.completed') {
-      await orderService.handleWebhook(body, signature);
+      const session = event.data.object as Stripe.Checkout.Session;
+      result = await orderService.processCheckoutSessionCompleted(session);
     } else if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
       // Payment succeeded - update records
-      // This is informational as the payment retry service already handles it
     } else if (event.type === 'payment_intent.payment_failed') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
       // Payment failed - could trigger notifications
@@ -124,14 +119,16 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
       // Handle customer deletion
     }
 
-    res.json({
+    return res.status(StatusCodes.OK).json({
+      success: true,
       received: true,
       eventType: event.type,
+      data: result,
     });
   } catch (error: any) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: 'Error processing webhook',
+      message: 'Error processing webhook event',
       error: error.message,
     });
   }

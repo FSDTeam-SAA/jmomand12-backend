@@ -14,6 +14,12 @@ router.post(
 
 // Raw Stripe webhook endpoint to process session completion events.
 // This route must not be protected by authentication.
+router.get('/webhook', (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Order webhook endpoint is active. Send HTTP POST requests with Stripe signature.',
+  });
+});
 router.post(
   '/webhook',
   orderController.handleStripeWebhook

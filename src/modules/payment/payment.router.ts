@@ -5,9 +5,18 @@ import paymentController from './payment.controller';
 
 const router = Router();
 
-// Webhook endpoint - must be first and without authentication
+const webhookHealthCheck = (_req: any, res: any) => {
+  res.status(200).json({
+    success: true,
+    message: 'Stripe webhook endpoint is active. Send HTTP POST requests with Stripe signature.',
+  });
+};
+
+// Webhook endpoints - must be first and without authentication
+router.get('/weebhook', webhookHealthCheck);
+
 router.post('/weebhook', paymentController.handleStripeWebhook);
-router.post('/webhook', paymentController.handleStripeWebhook);
+
 
 router.get('/', auth(USER_ROLE.ADMIN), paymentController.getAllPayments);
 router.get(
