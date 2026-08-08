@@ -20,21 +20,9 @@ const isProbablyPlaceholderKey = (key?: string) => {
   );
 };
 
-const stripe = !isProbablyPlaceholderKey(config.stripe.secretKey)
-  ? new Stripe(config.stripe.secretKey as string, {
-      apiVersion: '2025-08-27.basil' as any,
-    })
-  : null;
+import { getStripe, constructWebhookEvent } from '../../utils/stripe.utils';
 
-const requireStripe = (): Stripe => {
-  if (!stripe) {
-    throw new AppError(
-      'Stripe is not configured. Add STRIPE_SECRET_KEY in .env.',
-      StatusCodes.BAD_GATEWAY
-    );
-  }
-  return stripe;
-};
+const requireStripe = (): Stripe => getStripe();
 
 const generateOrderNumber = async (): Promise<string> => {
   const year = new Date().getFullYear();
@@ -226,80 +214,80 @@ const checkout = async (email: string) => {
   }
 };
 
+const processCheckoutSessionCompleted = async (session: Stripe.Checkout.Session) => {
+  const metadata = session.metadata;
+
+  if (metadata && metadata.checkoutType === 'cart' && metadata.orderId) {
+    const orderId = metadata.orderId;
+    const order = await Order.findById(orderId).populate('items.product');
+
+    if (!order) {
+      throw new AppError('Order not found from webhook metadata', StatusCodes.NOT_FOUND);
+    }
+
+    // Idempotency: Skip if already processed
+    if (order.status === 'paid') {
+      return { success: true, alreadyProcessed: true };
+    }
+
+    // Finalize the Order
+    order.status = 'paid';
+    order.paidAt = new Date();
+    order.stripePaymentIntentId = session.payment_intent as string;
+    await order.save();
+
+    // Process product stock deduction
+    for (const item of order.items) {
+      const product = await Product.findById(item.product);
+      if (product) {
+        product.quantity = Math.max(0, (product.quantity || 0) - item.quantity);
+        if (product.quantity === 0) {
+          product.inventoryStatus = 'unavailable';
+        }
+        await product.save();
+      }
+    }
+
+    // Clear the customer's cart
+    await Cart.deleteMany({ userId: order.customer, type: 'cart' });
+
+    // Send Order confirmation email
+    const customer = await User.findById(order.customer);
+    if (customer) {
+      const emailItems = order.items.map((item) => ({
+        title: (item.product as any).title || 'Product',
+        quantity: item.quantity,
+        price: item.price,
+      }));
+
+      await sendOrderConfirmationEmail({
+        to: customer.email,
+        customerName: `${customer.firstName} ${customer.lastName}`,
+        orderNumber: order.orderNumber,
+        items: emailItems,
+        totalAmount: order.totalAmount,
+        pickupCode: order.pickupCode,
+        pickupQrDataUrl: order.pickupQrDataUrl,
+      });
+    }
+
+    return { success: true };
+  }
+
+  return { success: true, ignored: true };
+};
+
 const handleWebhook = async (rawBody: Buffer, signature: string) => {
-  const stripeClient = requireStripe();
   let event: Stripe.Event;
 
   try {
-    event = stripeClient.webhooks.constructEvent(
-      rawBody,
-      signature,
-      config.stripe.webhookSecret as string
-    );
+    event = constructWebhookEvent(rawBody, signature);
   } catch (error: any) {
     throw new AppError(`Webhook signature verification failed: ${error.message}`, StatusCodes.BAD_REQUEST);
   }
 
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const metadata = session.metadata;
-
-    if (metadata && metadata.checkoutType === 'cart' && metadata.orderId) {
-      const orderId = metadata.orderId;
-      const order = await Order.findById(orderId).populate('items.product');
-
-      if (!order) {
-        throw new AppError('Order not found from webhook metadata', StatusCodes.NOT_FOUND);
-      }
-
-      // Idempotency: Skip if already processed
-      if (order.status === 'paid') {
-        return { success: true, alreadyProcessed: true };
-      }
-
-      // Finalize the Order
-      order.status = 'paid';
-      order.paidAt = new Date();
-      order.stripePaymentIntentId = session.payment_intent as string;
-      await order.save();
-
-      // Process product stock deduction
-      for (const item of order.items) {
-        const product = await Product.findById(item.product);
-        if (product) {
-          product.quantity = Math.max(0, (product.quantity || 0) - item.quantity);
-          if (product.quantity === 0) {
-            product.inventoryStatus = 'unavailable';
-          }
-          await product.save();
-        }
-      }
-
-      // Clear the customer's cart
-      await Cart.deleteMany({ userId: order.customer, type: 'cart' });
-
-      // Send Order confirmation email
-      const customer = await User.findById(order.customer);
-      if (customer) {
-        const emailItems = order.items.map((item) => ({
-          title: (item.product as any).title || 'Product',
-          quantity: item.quantity,
-          price: item.price,
-        }));
-
-        await sendOrderConfirmationEmail({
-          to: customer.email,
-          customerName: `${customer.firstName} ${customer.lastName}`,
-          orderNumber: order.orderNumber,
-          items: emailItems,
-          totalAmount: order.totalAmount,
-          pickupCode: order.pickupCode,
-          pickupQrDataUrl: order.pickupQrDataUrl,
-        });
-      }
-
-      return { success: true };
-    }
+    return processCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
   }
 
   return { success: true, ignored: true };
@@ -326,6 +314,7 @@ const getAllOrders = async () => {
 const orderService = {
   checkout,
   handleWebhook,
+  processCheckoutSessionCompleted,
   getMyOrders,
   getAllOrders,
 };
