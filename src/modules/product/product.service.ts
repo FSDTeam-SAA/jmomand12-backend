@@ -2,9 +2,32 @@ import AdmZip from 'adm-zip';
 import fs from 'fs';
 import { StatusCodes } from 'http-status-codes';
 import os from 'os';
-import pLimit from 'p-limit';
+import crypto from 'crypto';
 import path from 'path';
-import { v4 as uuid } from 'uuid';
+
+function createLimit(concurrency: number) {
+  const queue: Array<() => void> = [];
+  let active = 0;
+  const next = () => {
+    active--;
+    if (queue.length > 0) {
+      queue.shift()!();
+    }
+  };
+  return <T>(fn: () => Promise<T>): Promise<T> => {
+    return new Promise<T>((resolve, reject) => {
+      const run = () => {
+        active++;
+        fn().then(resolve, reject).finally(next);
+      };
+      if (active < concurrency) {
+        run();
+      } else {
+        queue.push(run);
+      }
+    });
+  };
+}
 import AppError from '../../errors/AppError';
 import logger from '../../logger';
 import { deleteFromCloudinary, uploadToCloudinary } from '../../utils/cloudinary';
@@ -171,7 +194,7 @@ const validateBulkProductRow = (
 
 const uploadProductImages = async (
   folderPath: string,
-  limit: ReturnType<typeof pLimit>,
+  limit: ReturnType<typeof createLimit>,
 ): Promise<Array<{ public_id: string; url: string }>> => {
   const imageFilePaths = listImageFiles(folderPath);
   if (!imageFilePaths.length) {
@@ -230,7 +253,7 @@ const bulkUploadProducts = async (
     throw new AppError('Your account is not found', StatusCodes.FORBIDDEN);
   }
 
-  const extractDir = path.join(os.tmpdir(), `bulk-upload-${uuid()}`);
+  const extractDir = path.join(os.tmpdir(), `bulk-upload-${crypto.randomUUID()}`);
 
   try {
     fs.mkdirSync(extractDir, { recursive: true });
@@ -276,7 +299,7 @@ const bulkUploadProducts = async (
     );
 
     const inventoryIds = await generateInventoryIdsBatch(rows.length);
-    const limit = pLimit(IMAGE_UPLOAD_CONCURRENCY);
+    const limit = createLimit(IMAGE_UPLOAD_CONCURRENCY);
 
     const result: IBulkUploadResult = {
       totalProcessed: rows.length,

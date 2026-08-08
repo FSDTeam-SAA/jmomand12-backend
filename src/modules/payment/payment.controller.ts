@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
 import paymentService from './payment.service';
+import orderService from '../order/order.service';
 import config from '../../config';
 import Stripe from 'stripe';
 
@@ -108,7 +109,9 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
 
   // Handle different webhook events
   try {
-    if (event.type === 'payment_intent.succeeded') {
+    if (event.type === 'checkout.session.completed') {
+      await orderService.handleWebhook(body, signature);
+    } else if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
       // Payment succeeded - update records
       // This is informational as the payment retry service already handles it
