@@ -358,34 +358,40 @@ const getUpcomingAuctions = async (query: Record<string, unknown>) => {
 
   const pageNumber = Number(page);
   const limitNumber = Number(limit);
-  const skip = (pageNumber - 1) * limitNumber;
 
-  const filter = {
-    status: 'upcoming',
-  };
+  const cacheKey = `cache:auction:upcoming:p${pageNumber}:l${limitNumber}`;
 
-  const [auctions, total] = await Promise.all([
-    Auction.find(filter)
-      .populate('products')
-      .populate('winner', 'firstName lastName email')
-      .sort({ startsAt: 1 })
-      .skip(skip)
-      .limit(limitNumber),
+  return getOrFetchWithCache(
+    cacheKey,
+    async () => {
+      const skip = (pageNumber - 1) * limitNumber;
+      const filter = { status: 'upcoming' };
 
-    Auction.countDocuments(filter),
-  ]);
+      const [auctions, total] = await Promise.all([
+        Auction.find(filter)
+          .populate('products')
+          .populate('winner', 'firstName lastName email')
+          .sort({ startsAt: 1 })
+          .skip(skip)
+          .limit(limitNumber),
 
-  const data = await addAuctionProductMetadata(auctions);
+        Auction.countDocuments(filter),
+      ]);
 
-  return {
-    meta: {
-      page: pageNumber,
-      limit: limitNumber,
-      total,
-      totalPage: Math.ceil(total / limitNumber),
+      const data = await addAuctionProductMetadata(auctions);
+
+      return {
+        meta: {
+          page: pageNumber,
+          limit: limitNumber,
+          total,
+          totalPage: Math.ceil(total / limitNumber),
+        },
+        data,
+      };
     },
-    data,
-  };
+    30, // 30 Seconds TTL for upcoming auctions catalog
+  );
 };
 
 const getClosingSoonAuctions = async (query: Record<string, unknown>) => {
@@ -393,47 +399,56 @@ const getClosingSoonAuctions = async (query: Record<string, unknown>) => {
 
   const pageNumber = Number(page);
   const limitNumber = Number(limit);
-  const skip = (pageNumber - 1) * limitNumber;
 
-  const now = new Date();
-  const threeDaysLater = new Date(now);
-  threeDaysLater.setDate(threeDaysLater.getDate() + 3);
+  const cacheKey = `cache:auction:closingsoon:p${pageNumber}:l${limitNumber}`;
 
-  const filter = {
-    status: 'active',
-    endsAt: { $gt: now, $lte: threeDaysLater },
-  };
+  return getOrFetchWithCache(
+    cacheKey,
+    async () => {
+      const skip = (pageNumber - 1) * limitNumber;
 
-  const [auctions, total] = await Promise.all([
-    Auction.find(filter)
-      .populate('products')
-      .populate('winner', 'firstName lastName email')
-      .sort({ endsAt: 1 })
-      .skip(skip)
-      .limit(limitNumber),
+      const now = new Date();
+      const threeDaysLater = new Date(now);
+      threeDaysLater.setDate(threeDaysLater.getDate() + 3);
 
-    Auction.countDocuments(filter),
-  ]);
+      const filter = {
+        status: 'active',
+        endsAt: { $gt: now, $lte: threeDaysLater },
+      };
 
-  const auctionsWithProductMetadata = await addAuctionProductMetadata(auctions);
-  const data = auctionsWithProductMetadata.map((auction) => {
-    const auctionObj = toPlainObject(auction);
-    const timeRemaining = Math.max(
-      0,
-      Math.floor((new Date(auctionObj.endsAt).getTime() - now.getTime()) / 1000),
-    );
-    return { ...auctionObj, timeRemaining };
-  });
+      const [auctions, total] = await Promise.all([
+        Auction.find(filter)
+          .populate('products')
+          .populate('winner', 'firstName lastName email')
+          .sort({ endsAt: 1 })
+          .skip(skip)
+          .limit(limitNumber),
 
-  return {
-    meta: {
-      page: pageNumber,
-      limit: limitNumber,
-      total,
-      totalPage: Math.ceil(total / limitNumber),
+        Auction.countDocuments(filter),
+      ]);
+
+      const auctionsWithProductMetadata = await addAuctionProductMetadata(auctions);
+      const data = auctionsWithProductMetadata.map((auction) => {
+        const auctionObj = toPlainObject(auction);
+        const timeRemaining = Math.max(
+          0,
+          Math.floor((new Date(auctionObj.endsAt).getTime() - now.getTime()) / 1000),
+        );
+        return { ...auctionObj, timeRemaining };
+      });
+
+      return {
+        meta: {
+          page: pageNumber,
+          limit: limitNumber,
+          total,
+          totalPage: Math.ceil(total / limitNumber),
+        },
+        data,
+      };
     },
-    data,
-  };
+    5, // 5 Seconds TTL for live closing soon auctions
+  );
 };
 
 const getClosedAuctions = async (query: Record<string, unknown>) => {
@@ -441,34 +456,40 @@ const getClosedAuctions = async (query: Record<string, unknown>) => {
 
   const pageNumber = Number(page);
   const limitNumber = Number(limit);
-  const skip = (pageNumber - 1) * limitNumber;
 
-  const filter = {
-    status: 'ended',
-  };
+  const cacheKey = `cache:auction:closed:p${pageNumber}:l${limitNumber}`;
 
-  const [auctions, total] = await Promise.all([
-    Auction.find(filter)
-      .populate('products')
-      .populate('winner', 'firstName lastName email')
-      .sort({ endsAt: -1 })
-      .skip(skip)
-      .limit(limitNumber),
+  return getOrFetchWithCache(
+    cacheKey,
+    async () => {
+      const skip = (pageNumber - 1) * limitNumber;
+      const filter = { status: 'ended' };
 
-    Auction.countDocuments(filter),
-  ]);
+      const [auctions, total] = await Promise.all([
+        Auction.find(filter)
+          .populate('products')
+          .populate('winner', 'firstName lastName email')
+          .sort({ endsAt: -1 })
+          .skip(skip)
+          .limit(limitNumber),
 
-  const data = await addAuctionProductMetadata(auctions);
+        Auction.countDocuments(filter),
+      ]);
 
-  return {
-    meta: {
-      page: pageNumber,
-      limit: limitNumber,
-      total,
-      totalPage: Math.ceil(total / limitNumber),
+      const data = await addAuctionProductMetadata(auctions);
+
+      return {
+        meta: {
+          page: pageNumber,
+          limit: limitNumber,
+          total,
+          totalPage: Math.ceil(total / limitNumber),
+        },
+        data,
+      };
     },
-    data,
-  };
+    60, // 60 Seconds TTL for ended/closed auction history
+  );
 };
 
 const updateAuction = async (id: string, data: Partial<IAuction>) => {
