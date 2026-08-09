@@ -21,6 +21,7 @@ export interface IUser {
   otp?: string | null;
   isSuspend: boolean;
   isBlocked: boolean;
+  isSystemUser?: boolean;
   stripeCustomerId?: string;
   defaultPaymentMethodId?: string;
   hasDefaultPaymentMethod?: boolean;

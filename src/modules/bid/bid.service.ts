@@ -6,6 +6,8 @@ import AuctionProduct from '../AuctionProduct/AuctionProduct.model';
 import Invoice from '../invoice/invoice.model';
 import { PickupAppointment } from '../pickup/pickup.model';
 import Bid from './bid.model';
+import Auction from '../auction/auction.model';
+import { getOrCreateSystemUser } from '../user/user.utils';
 import { enqueueOutbidEmailNotification } from '../../queues/outbid-email.producer';
 import { emitAuctionBidUpdate } from '../../socket/notification.service';
 
@@ -36,6 +38,21 @@ const addBid = async (email: string, payload: any) => {
   // Product must be active
   if (auctionProduct.status !== 'active') {
     throw new AppError('This product is not available for bidding.', StatusCodes.BAD_REQUEST);
+  }
+
+  const auction = await Auction.findById(auctionProduct.auctionId);
+  if (!auction) {
+    throw new AppError('Associated auction not found', StatusCodes.NOT_FOUND);
+  }
+
+  // Anti-sniping check: extend timer by 59 seconds if bid is placed within last 1 minute (60s)
+  const now = Date.now();
+  let timeRemainingMs = auction.endsAt.getTime() - now;
+
+  if (timeRemainingMs > 0 && timeRemainingMs <= 60 * 1000) {
+    auction.endsAt = new Date(auction.endsAt.getTime() + 59 * 1000);
+    await auction.save();
+    timeRemainingMs = auction.endsAt.getTime() - now;
   }
 
   // Calculate minimum bid
@@ -144,8 +161,68 @@ const addBid = async (email: string, payload: any) => {
     bidderId: user._id.toString(),
     amount,
     minimumNextBid: amount + auctionProduct.bidIncrement,
+    endsAt: auction.endsAt,
     placedAt: new Date(),
   });
+
+  // System Auto-Counter Bidding Logic (Active ONLY in the last 1 hour of auction)
+  if (
+    auction.status === 'active' &&
+    timeRemainingMs <= 60 * 60 * 1000 &&
+    auctionProduct.reservePrice != null &&
+    auctionProduct.reservePrice > 0 &&
+    amount < auctionProduct.reservePrice &&
+    !user.isSystemUser
+  ) {
+    const systemUser = await getOrCreateSystemUser();
+
+    // Counter bid capped at reservePrice
+    const systemAmount = Math.min(amount + auctionProduct.bidIncrement, auctionProduct.reservePrice);
+
+    const systemBid = await Bid.create({
+      auctionId: auctionProduct.auctionId,
+      auctionProductId: auctionProduct._id,
+      productId: auctionProduct.productId,
+      bidderId: systemUser._id,
+      amount: systemAmount,
+      isWinningBid: true,
+      isSystemBid: true,
+    });
+
+    await AuctionProduct.findByIdAndUpdate(auctionProduct._id, {
+      $set: {
+        highestBid: {
+          bidder: systemUser._id as any,
+          bid: systemBid._id,
+          amount: systemAmount,
+          placedAt: new Date(),
+        },
+      },
+    });
+
+    await Bid.findByIdAndUpdate(bid._id, { isWinningBid: false });
+
+    // Anti-sniping check for system bid
+    const currentNow = Date.now();
+    const systemTimeRemainingMs = auction.endsAt.getTime() - currentNow;
+    if (systemTimeRemainingMs > 0 && systemTimeRemainingMs <= 60 * 1000) {
+      auction.endsAt = new Date(auction.endsAt.getTime() + 59 * 1000);
+      await auction.save();
+    }
+
+    emitAuctionBidUpdate(auctionProduct.auctionId.toString(), {
+      auctionId: auctionProduct.auctionId.toString(),
+      auctionProductId: auctionProduct._id.toString(),
+      productId: auctionProduct.productId.toString(),
+      bidId: systemBid._id.toString(),
+      bidderId: systemUser._id.toString(),
+      amount: systemAmount,
+      minimumNextBid: systemAmount + auctionProduct.bidIncrement,
+      endsAt: auction.endsAt,
+      isSystemBid: true,
+      placedAt: new Date(),
+    });
+  }
 
   return bid;
 };

@@ -7,5 +7,6 @@ export interface IBid {
   bidderId: Types.ObjectId;
   amount: number;
   isWinningBid: boolean;
+  isSystemBid?: boolean;
   createdAt: Date;
 }

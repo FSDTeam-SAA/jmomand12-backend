@@ -59,6 +59,10 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
+    isSystemUser: {
+      type: Boolean,
+      default: false,
+    },
     stripeCustomerId: {
       type: String,
     },
