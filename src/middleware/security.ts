@@ -4,6 +4,7 @@ import express, { Application } from "express";
 import helmet from "helmet";
 import hpp from "hpp";
 import config from "../config";
+import { apiRateLimiter } from "./rateLimiter";
 
 const corsOptions: cors.CorsOptions = {
   origin(origin, callback) {
@@ -24,6 +25,7 @@ const corsOptions: cors.CorsOptions = {
 
 
 export const applySecurity = (app: Application) => {
+  app.use(apiRateLimiter);
   app.use(
     helmet({
       contentSecurityPolicy: false,
