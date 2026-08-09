@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import config from "../config";
+import logger from "../logger";
 
 interface SendEmailParams {
   to: string;
@@ -18,13 +19,14 @@ const sendEmail = async ({
   html,
 }: SendEmailParams): Promise<SendEmailResponse> => {
   try {
+    const formattedPass = config.email.emailPass ? config.email.emailPass.replace(/\s+/g, '') : '';
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 587,
       secure: false,
       auth: {
         user: config.email.emailAddress,
-        pass: config.email.emailPass,
+        pass: formattedPass,
       },
       tls: {
         rejectUnauthorized: false,
@@ -39,11 +41,11 @@ const sendEmail = async ({
     };
 
     await transporter.sendMail(mailOptions);
-
-    // console.log("Email sent successfully", mailOptions.from, mailOptions.to);
+    logger.info({ to, subject }, 'Email sent successfully via Nodemailer');
 
     return { success: true };
   } catch (error: any) {
+    logger.error({ error: error.message, to, subject }, 'Failed to send email via Nodemailer');
     return { success: false, error: error.message };
   }
 };
