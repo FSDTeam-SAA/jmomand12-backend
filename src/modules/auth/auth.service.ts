@@ -78,11 +78,15 @@ const forgotPassword = async (email: string) => {
     { new: true },
   );
 
-  await sendEmail({
+  const emailResult = await sendEmail({
     to: isExistingUser.email,
     subject: 'Reset your password',
     html: verificationCodeTemplate(otp),
   });
+
+  if (!emailResult.success) {
+    throw new AppError(emailResult.error || 'Failed to send OTP email', StatusCodes.INTERNAL_SERVER_ERROR);
+  }
 
   const token = generateTokens(isExistingUser);
   const { accessToken } = token;
@@ -106,12 +110,15 @@ const resendForgotOtpCode = async (email: string) => {
     { new: true },
   ).select('username email role');
 
-  await sendEmail({
+  const emailResult = await sendEmail({
     to: existingUser.email,
     subject: `${companyName} - Password Reset OTP`,
     html: verificationCodeTemplate(otp),
   });
-  // return result;
+
+  if (!emailResult.success) {
+    throw new AppError(emailResult.error || 'Failed to send OTP email', StatusCodes.INTERNAL_SERVER_ERROR);
+  }
 };
 
 const verifyOtp = async (email: string, otp: string) => {
