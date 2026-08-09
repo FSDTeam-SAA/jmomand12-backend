@@ -41,6 +41,11 @@ const bidSchema = new Schema<IBid>(
       type: Boolean,
       default: false,
     },
+
+    isSystemBid: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: {

@@ -3,6 +3,7 @@ import logger from '../logger';
 import { activateAuctionsJob } from './jobs/activate-auctions.job';
 import { closeAuctionsJob } from './jobs/close-auctions.job';
 import { processPaymentRetriesJob } from './jobs/process-payment-retries.job';
+import { processLastHourSystemBidsJob } from './jobs/process-last-hour-system-bids.job';
 
 export const startAuctionCronJobs = (): void => {
   logger.info('Registering auction cron jobs');
@@ -12,8 +13,9 @@ export const startAuctionCronJobs = (): void => {
     async () => {
       try {
         await activateAuctionsJob();
+        await processLastHourSystemBidsJob();
       } catch (error: any) {
-        logger.error({ error }, 'Auction activation cron job failed');
+        logger.error({ error }, 'Auction activation / last-hour auto-bids cron job failed');
       }
     },
     {

@@ -8,12 +8,14 @@ import invoiceService from '../../modules/invoice/invoice.service';
 import paymentService from '../../modules/payment/payment.service';
 import Product from '../../modules/product/product.model';
 import { User } from '../../modules/user/user.model';
+import { getOrCreateSystemUser } from '../../modules/user/user.utils';
 import Settings from '../../modules/settings/settings.model';
 import Bid from '../../modules/bid/bid.model';
 import { calculateAuctionInvoiceCharges } from '../../modules/invoice/invoice.utils';
 import {
   createNotification,
   emitAuctionStatusUpdate,
+  emitAuctionBidUpdate,
 } from '../../socket/notification.service';
 import { enqueueWinnerEmailNotification } from '../../queues/winner-email.producer';
 
@@ -229,6 +231,13 @@ const processAuctionProduct = async (
 
   if (!auctionProduct.highestBid?.amount || auctionProduct.highestBid.amount <= 0) {
     return await markUnsold(auctionProduct, 'No bids received');
+  }
+
+  if (auctionProduct.highestBid?.bidder) {
+    const highestBidUser = await User.findById(auctionProduct.highestBid.bidder);
+    if (highestBidUser?.isSystemUser) {
+      return await markUnsold(auctionProduct, 'Reserve price not met - System highest bidder');
+    }
   }
 
   if (auctionProduct.reservePrice && auctionProduct.highestBid.amount < auctionProduct.reservePrice) {
@@ -643,6 +652,94 @@ const processPendingPaymentRetries = async (): Promise<{
   }
 };
 
+const processLastHourSystemBids = async (): Promise<{ counterBidsPlaced: number; executionTimeMs: number }> => {
+  const startTime = Date.now();
+  const now = new Date();
+  const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+
+  const activeAuctionsInLastHour = await Auction.find({
+    status: 'active',
+    endsAt: { $gt: now, $lte: oneHourFromNow },
+  }).select('_id endsAt');
+
+  if (!activeAuctionsInLastHour.length) {
+    return { counterBidsPlaced: 0, executionTimeMs: Date.now() - startTime };
+  }
+
+  const auctionIds = activeAuctionsInLastHour.map((a) => a._id);
+  const systemUser = await getOrCreateSystemUser();
+
+  const auctionProducts = await AuctionProduct.find({
+    auctionId: { $in: auctionIds },
+    status: 'active',
+    reservePrice: { $exists: true, $gt: 0 },
+    'highestBid.amount': { $gt: 0 },
+  });
+
+  let counterBidsPlaced = 0;
+
+  for (const ap of auctionProducts) {
+    if (!ap.reservePrice || ap.highestBid.amount >= ap.reservePrice) continue;
+    if (!ap.highestBid.bidder) continue;
+    if (ap.highestBid.bidder.toString() === systemUser._id.toString()) continue;
+
+    const currentCustomerBidAmount = ap.highestBid.amount;
+    const systemAmount = Math.min(
+      currentCustomerBidAmount + ap.bidIncrement,
+      ap.reservePrice,
+    );
+
+    const systemBid = await Bid.create({
+      auctionId: ap.auctionId,
+      auctionProductId: ap._id,
+      productId: ap.productId,
+      bidderId: systemUser._id,
+      amount: systemAmount,
+      isWinningBid: true,
+      isSystemBid: true,
+    });
+
+    const previousBidId = ap.highestBid.bid;
+
+    ap.highestBid = {
+      bidder: systemUser._id as any,
+      bid: systemBid._id as any,
+      amount: systemAmount,
+      placedAt: new Date(),
+    };
+
+    await ap.save();
+
+    if (previousBidId) {
+      await Bid.findByIdAndUpdate(previousBidId, { isWinningBid: false });
+    }
+
+    const parentAuction = activeAuctionsInLastHour.find(
+      (a) => a._id.toString() === ap.auctionId.toString(),
+    );
+
+    emitAuctionBidUpdate(ap.auctionId.toString(), {
+      auctionId: ap.auctionId.toString(),
+      auctionProductId: ap._id.toString(),
+      productId: ap.productId.toString(),
+      bidId: systemBid._id.toString(),
+      bidderId: systemUser._id.toString(),
+      amount: systemAmount,
+      minimumNextBid: systemAmount + ap.bidIncrement,
+      endsAt: parentAuction?.endsAt,
+      isSystemBid: true,
+      placedAt: new Date(),
+    });
+
+    counterBidsPlaced++;
+  }
+
+  return {
+    counterBidsPlaced,
+    executionTimeMs: Date.now() - startTime,
+  };
+};
+
 const auctionCronService = {
   activateDueAuctions,
   closeDueAuctions,
@@ -651,6 +748,7 @@ const auctionCronService = {
   assignWinner,
   processPayment,
   processPendingPaymentRetries,
+  processLastHourSystemBids,
 };
 
 export default auctionCronService;
