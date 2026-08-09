@@ -1,0 +1,48 @@
+name: Deploy to VPS (Production)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy to Production VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Validate TypeScript Build
+        run: npm run build
+
+      - name: Deploy to VPS Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          script_stop: true
+          script: |
+            export PAGER=cat
+            echo "=== Starting Automated CI/CD Deployment ==="
+            cd /var/www/discountdealsdmv/backend
+            git config --global --add safe.directory /var/www/discountdealsdmv/backend || true
+            git fetch origin main
+            git reset --hard origin/main
+            npm ci --production=false
+            npm run build
+            pm2 reload ecosystem.config.js --update-env || pm2 restart all
+            echo "=== Deployment Successfully Completed! ==="
+            pm2 status
