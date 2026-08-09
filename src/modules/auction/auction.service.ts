@@ -11,6 +11,8 @@ import { PUBLIC_USER_SELECT } from '../user/user.utils';
 import auctionCronService from '../../cron/services/auction-cron.service';
 import { createNotification } from '../../socket/notification.service';
 
+import { getCache, setCache, getOrFetchWithCache, invalidateCachePattern } from '../../utils/redis.cache';
+
 const AUCTION_PUBLISHABLE_STATUSES = ['available', 'unsold'] as const;
 const LOCKING_AUCTION_PRODUCT_STATUSES = [
   'upcoming',
@@ -226,32 +228,40 @@ const getActiveAuctions = async (query: Record<string, unknown>) => {
   const pageNumber = Number(page);
   const limitNumber = Number(limit);
 
-  const skip = (pageNumber - 1) * limitNumber;
+  const cacheKey = `cache:auction:active:p${pageNumber}:l${limitNumber}`;
 
-  const [auctions, total] = await Promise.all([
-    Auction.find({ status: 'active' })
-      .populate('products')
-      .populate('winner', 'firstName lastName email')
-      .sort({ startsAt: 1 })
-      .skip(skip)
-      .limit(limitNumber),
+  return getOrFetchWithCache(
+    cacheKey,
+    async () => {
+      const skip = (pageNumber - 1) * limitNumber;
 
-    Auction.countDocuments({
-      status: 'active',
-    }),
-  ]);
+      const [auctions, total] = await Promise.all([
+        Auction.find({ status: 'active' })
+          .populate('products')
+          .populate('winner', 'firstName lastName email')
+          .sort({ startsAt: 1 })
+          .skip(skip)
+          .limit(limitNumber),
 
-  const data = await addAuctionProductMetadata(auctions);
+        Auction.countDocuments({
+          status: 'active',
+        }),
+      ]);
 
-  return {
-    meta: {
-      page: pageNumber,
-      limit: limitNumber,
-      total,
-      totalPage: Math.ceil(total / limitNumber),
+      const data = await addAuctionProductMetadata(auctions);
+
+      return {
+        meta: {
+          page: pageNumber,
+          limit: limitNumber,
+          total,
+          totalPage: Math.ceil(total / limitNumber),
+        },
+        data,
+      };
     },
-    data,
-  };
+    5,
+  );
 };
 
 const getAllAuctions = async (query: Record<string, unknown>) => {
@@ -323,17 +333,24 @@ const getAllAuctions = async (query: Record<string, unknown>) => {
 };
 
 const getAuctionDetails = async (id: string) => {
-  const auction = await Auction.findById(id)
-    .populate('products')
-    .populate('winner', 'firstName lastName email profileImage');
+  const cacheKey = `cache:auction:details:${id}`;
 
-  if (!auction) {
-    throw new AppError('Auction not found', StatusCodes.NOT_FOUND);
-  }
+  return getOrFetchWithCache(
+    cacheKey,
+    async () => {
+      const auction = await Auction.findById(id)
+        .populate('products')
+        .populate('winner', 'firstName lastName email profileImage');
 
-  const [auctionWithProductMetadata] = await addAuctionProductMetadata([auction]);
+      if (!auction) {
+        throw new AppError('Auction not found', StatusCodes.NOT_FOUND);
+      }
 
-  return auctionWithProductMetadata;
+      const [auctionWithProductMetadata] = await addAuctionProductMetadata([auction]);
+      return auctionWithProductMetadata;
+    },
+    3,
+  );
 };
 
 const getUpcomingAuctions = async (query: Record<string, unknown>) => {

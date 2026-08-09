@@ -1,6 +1,8 @@
 import http from 'http';
 import mongoose from 'mongoose';
 import { Server } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import Redis from 'ioredis';
 import app from './app';
 import config from './config';
 import { initializeCronJobs } from './cron';
@@ -10,8 +12,12 @@ import { initNotificationSocket } from './socket/notification.service';
 
 async function main() {
   try {
-    await mongoose.connect(config.mongodbUrl as string);
-    logger.info('MongoDB connected successfully');
+    await mongoose.connect(config.mongodbUrl as string, {
+      maxPoolSize: 100,
+      minPoolSize: 10,
+      serverSelectionTimeoutMS: 10000,
+    });
+    logger.info('MongoDB connected successfully with maxPoolSize: 100');
     const httpServer = http.createServer(app);
 
     const io = new Server(httpServer, {
@@ -20,6 +26,17 @@ async function main() {
         methods: ['GET', 'POST'],
       },
     });
+
+    if (config.redis?.url) {
+      try {
+        const pubClient = new Redis(config.redis.url, { maxRetriesPerRequest: null });
+        const subClient = pubClient.duplicate();
+        io.adapter(createAdapter(pubClient, subClient));
+        logger.info('Socket.IO Redis adapter configured successfully');
+      } catch (err: any) {
+        logger.warn({ error: err.message }, 'Failed to initialize Socket.IO Redis adapter; falling back to in-memory adapter');
+      }
+    }
 
     io.on('connection', (socket) => {
       logger.info(`Client connected: ${socket.id}`);

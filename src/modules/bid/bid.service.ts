@@ -10,6 +10,7 @@ import Auction from '../auction/auction.model';
 import { getOrCreateSystemUser } from '../user/user.utils';
 import { enqueueOutbidEmailNotification } from '../../queues/outbid-email.producer';
 import { emitAuctionBidUpdate } from '../../socket/notification.service';
+import { invalidateCachePattern } from '../../utils/redis.cache';
 
 const addBid = async (email: string, payload: any) => {
   // Find user
@@ -164,6 +165,8 @@ const addBid = async (email: string, payload: any) => {
     endsAt: auction.endsAt,
     placedAt: new Date(),
   });
+
+  void invalidateCachePattern('cache:auction:*');
 
   // System Auto-Counter Bidding Logic (Active ONLY in the last 1 hour of auction)
   if (
