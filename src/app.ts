@@ -9,6 +9,10 @@ import router from "./router";
 
 const app: Application = express();
 
+// The production API is served behind one reverse-proxy hop (Nginx). Trust it
+// so middleware such as express-rate-limit can safely use X-Forwarded-For.
+app.set("trust proxy", 1);
+
 app.use(express.static("public"));
 
 app.use(cookieParser());
