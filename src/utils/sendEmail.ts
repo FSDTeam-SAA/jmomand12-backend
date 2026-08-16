@@ -21,15 +21,12 @@ const sendEmail = async ({
   try {
     const formattedPass = config.email.emailPass ? config.email.emailPass.replace(/\s+/g, '') : '';
     const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
+      host: config.email.smtpHost,
+      port: config.email.smtpPort,
+      secure: config.email.smtpSecure,
       auth: {
         user: config.email.emailAddress,
         pass: formattedPass,
-      },
-      tls: {
-        rejectUnauthorized: false,
       },
     });
 

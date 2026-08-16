@@ -17,6 +17,9 @@ export default {
     emailAddress: process.env.EMAIL_ADDRESS,
     emailPass: process.env.EMAIL_PASSWORD,
     adminEmail: process.env.ADMIN_EMAIL,
+    smtpHost: process.env.SMTP_HOST,
+    smtpPort: Number(process.env.SMTP_PORT || 465),
+    smtpSecure: process.env.SMTP_SECURE !== 'false',
   },
   reset: {
     reset_password_token_secret: process.env.RESET_PASSWORD_TOKEN_SECRET,
