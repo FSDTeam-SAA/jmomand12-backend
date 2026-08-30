@@ -34,6 +34,11 @@ router.get(
   auth(USER_ROLE.USER, USER_ROLE.ADMIN),
   paymentController.getSetupIntentStatus,
 );
+router.get(
+  '/default-payment-method',
+  auth(USER_ROLE.USER, USER_ROLE.ADMIN),
+  paymentController.getDefaultPaymentMethodSummary,
+);
 router.post(
   '/default-payment-method',
   auth(USER_ROLE.USER, USER_ROLE.ADMIN),

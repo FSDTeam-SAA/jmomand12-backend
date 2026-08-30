@@ -228,6 +228,32 @@ const saveDefaultPaymentMethod = async (
   return user;
 };
 
+const getDefaultPaymentMethodSummary = async (email: string) => {
+  const user = await User.findOne({ email }).select('stripeCustomerId defaultPaymentMethodId hasDefaultPaymentMethod');
+
+  if (!user?.hasDefaultPaymentMethod || !user.stripeCustomerId || !user.defaultPaymentMethodId) {
+    throw new AppError('No saved payment method was found for this account.', StatusCodes.NOT_FOUND);
+  }
+
+  try {
+    const paymentMethod = await requireStripe().paymentMethods.retrieve(user.defaultPaymentMethodId);
+
+    if (paymentMethod.customer !== user.stripeCustomerId || paymentMethod.type !== 'card' || !paymentMethod.card) {
+      throw new AppError('The saved payment method is no longer available.', StatusCodes.BAD_REQUEST);
+    }
+
+    return {
+      brand: paymentMethod.card.brand,
+      last4: paymentMethod.card.last4,
+      expMonth: paymentMethod.card.exp_month,
+      expYear: paymentMethod.card.exp_year,
+    };
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    return toAppStripeError(error);
+  }
+};
+
 const createTestDefaultPaymentMethod = async (
   email: string,
   payload: {
@@ -535,6 +561,7 @@ const paymentService = {
   createSetupIntent,
   getSetupIntentStatus,
   saveDefaultPaymentMethod,
+  getDefaultPaymentMethodSummary,
   createTestDefaultPaymentMethod,
   chargeSavedPaymentMethod,
   createPaymentRetry,

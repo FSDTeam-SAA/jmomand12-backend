@@ -33,7 +33,9 @@ export default {
   },
 
   stripe: {
-    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+    // Support the legacy local variable name while standardizing deployments on
+    // STRIPE_PUBLISHABLE_KEY. The publishable key is safe to send to Stripe.js.
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_PUBLIC_KEY,
     secretKey: process.env.STRIPE_SECRET_KEY,
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   },

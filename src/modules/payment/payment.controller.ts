@@ -66,6 +66,17 @@ const saveDefaultPaymentMethod = catchAsync(async (req, res) => {
   });
 });
 
+const getDefaultPaymentMethodSummary = catchAsync(async (req, res) => {
+  const result = await paymentService.getDefaultPaymentMethodSummary(req.user.email);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Saved payment method retrieved successfully',
+    data: result,
+  });
+});
+
 const createTestDefaultPaymentMethod = catchAsync(async (req, res) => {
   const { email } = req.user;
   const result = await paymentService.createTestDefaultPaymentMethod(email, req.body);
@@ -140,6 +151,7 @@ const paymentController = {
   createSetupIntent,
   getSetupIntentStatus,
   saveDefaultPaymentMethod,
+  getDefaultPaymentMethodSummary,
   createTestDefaultPaymentMethod,
   handleStripeWebhook,
 };
