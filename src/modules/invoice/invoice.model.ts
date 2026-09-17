@@ -43,6 +43,11 @@ const invoiceSchema = new Schema<IInvoice>(
       min: 0,
       default: 0,
     },
+    buyerPremiumRate: {
+      type: Number,
+      default: 15,
+      min: 0,
+    },
     buyerPremiumAmount: {
       type: Number,
       required: true,
@@ -60,6 +65,16 @@ const invoiceSchema = new Schema<IInvoice>(
       required: true,
       min: 0,
       default: 0,
+    },
+    creditCardFeeRate: {
+      type: Number,
+      default: 3.3,
+      min: 0,
+    },
+    creditCardFeeAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     totalAmount: {
       type: Number,

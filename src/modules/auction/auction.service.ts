@@ -66,12 +66,19 @@ const addAuctionProductMetadata = async (auctions: any[]) => {
         if (!auctionProduct) return productObject;
 
         const currentBid = auctionProduct.highestBid?.amount ?? 0;
+        const effectiveReservePrice =
+          auctionProduct.reservePrice ?? productObject.reservePrice ?? 0;
+        const isReserveMet =
+          effectiveReservePrice > 0 ? currentBid >= effectiveReservePrice : true;
 
         return {
           ...productObject,
           auctionProductId: auctionProduct._id,
           auctionProductStatus: auctionProduct.status,
           currentBid,
+          soldPrice: auctionProduct.soldPrice,
+          reservePrice: effectiveReservePrice > 0 ? effectiveReservePrice : productObject.reservePrice,
+          isReserveMet,
           minimumNextBid:
             currentBid > 0
               ? currentBid + auctionProduct.bidIncrement
@@ -181,14 +188,18 @@ const createAuction = async (payload: any, email: string) => {
   });
 
   await AuctionProduct.insertMany(
-    products.map((product) => ({
-      auctionId: auction._id,
-      productId: product._id,
-      startingBid: payload.startingBid,
-      ...(payload.reservePrice != null ? { reservePrice: payload.reservePrice } : {}),
-      bidIncrement: payload.bidIncrement,
-      status: auction.status,
-    })),
+    products.map((product) => {
+      const effectiveReservePrice =
+        payload.reservePrice != null ? payload.reservePrice : product.reservePrice;
+      return {
+        auctionId: auction._id,
+        productId: product._id,
+        startingBid: payload.startingBid,
+        ...(effectiveReservePrice != null ? { reservePrice: effectiveReservePrice } : {}),
+        bidIncrement: payload.bidIncrement,
+        status: auction.status,
+      };
+    }),
   );
 
   await Product.updateMany(

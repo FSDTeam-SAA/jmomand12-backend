@@ -1,6 +1,28 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+const nodeEnv = process.env.NODE_ENV || 'development';
+const explicitStripeMode = process.env.STRIPE_MODE?.toLowerCase();
+const isLiveStripe = explicitStripeMode
+  ? explicitStripeMode === 'live'
+  : nodeEnv === 'production';
+
+const stripePublishableKey = isLiveStripe
+  ? (process.env.STRIPE_LIVE_PUBLISHABLE_KEY ||
+      process.env.STRIPE_PUBLISHABLE_KEY ||
+      process.env.STRIPE_PUBLIC_KEY)
+  : (process.env.STRIPE_TEST_PUBLISHABLE_KEY ||
+      process.env.STRIPE_PUBLISHABLE_KEY ||
+      process.env.STRIPE_PUBLIC_KEY);
+
+const stripeSecretKey = isLiveStripe
+  ? (process.env.STRIPE_LIVE_SECRET_KEY || process.env.STRIPE_SECRET_KEY)
+  : (process.env.STRIPE_TEST_SECRET_KEY || process.env.STRIPE_SECRET_KEY);
+
+const stripeWebhookSecret = isLiveStripe
+  ? (process.env.STRIPE_LIVE_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET)
+  : (process.env.STRIPE_TEST_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET);
+
 export default {
   port: process.env.PORT,
   mongodbUrl: process.env.MONGODB_URL,
@@ -33,11 +55,12 @@ export default {
   },
 
   stripe: {
-    // Support the legacy local variable name while standardizing deployments on
-    // STRIPE_PUBLISHABLE_KEY. The publishable key is safe to send to Stripe.js.
-    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_PUBLIC_KEY,
-    secretKey: process.env.STRIPE_SECRET_KEY,
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    mode: isLiveStripe ? ('live' as const) : ('test' as const),
+    isLive: isLiveStripe,
+    isTest: !isLiveStripe,
+    publishableKey: stripePublishableKey,
+    secretKey: stripeSecretKey,
+    webhookSecret: stripeWebhookSecret,
   },
 
   app: {

@@ -18,10 +18,11 @@ type AdminPaymentRow = {
 
 import { getStripe } from '../../utils/stripe.utils';
 
-const isStripeTestMode = () => config.stripe.secretKey?.startsWith('sk_test_') === true;
+const isStripeTestMode = () => config.stripe.isTest || config.stripe.secretKey?.startsWith('sk_test_') === true;
 
 const getTestHelperStatus = () => ({
-  enabled: config.NODE_ENV === 'development',
+  enabled: config.NODE_ENV !== 'production' && isStripeTestMode(),
+  mode: config.stripe.mode,
 });
 
 const requireStripe = () => getStripe();
@@ -53,12 +54,37 @@ const getOrCreateStripeCustomer = async (email: string): Promise<string> => {
     throw new AppError('User not found', StatusCodes.NOT_FOUND);
   }
 
+  const stripeClient = requireStripe();
+
   if (user.stripeCustomerId) {
-    return user.stripeCustomerId;
+    try {
+      const existingCustomer = await stripeClient.customers.retrieve(user.stripeCustomerId);
+      if (!existingCustomer.deleted) {
+        return user.stripeCustomerId;
+      }
+    } catch (error: any) {
+      const isMissingCustomer =
+        error?.code === 'resource_missing' ||
+        error?.raw?.code === 'resource_missing' ||
+        (typeof error?.message === 'string' && error.message.toLowerCase().includes('no such customer'));
+
+      if (!isMissingCustomer) {
+        return toAppStripeError(error);
+      }
+    }
+
+    // Customer does not exist in the active Stripe account/mode (switched test/live mode)
+    // Clear stale customer ID and default payment method so a fresh one is created
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $unset: { stripeCustomerId: 1, defaultPaymentMethodId: 1 },
+        $set: { hasDefaultPaymentMethod: false },
+      },
+    );
   }
 
   try {
-    const stripeClient = requireStripe();
     const customer = await stripeClient.customers.create({
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
@@ -68,8 +94,12 @@ const getOrCreateStripeCustomer = async (email: string): Promise<string> => {
       },
     });
 
-    user.stripeCustomerId = customer.id;
-    await user.save();
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $set: { stripeCustomerId: customer.id },
+      },
+    );
 
     return customer.id;
   } catch (error) {
@@ -82,6 +112,7 @@ const createSetupIntent = async (email: string): Promise<{
   setupIntentId: string;
   clientSecret: string | null;
   publishableKey?: string;
+  testHelperEnabled?: boolean;
 }> => {
   const stripeClient = requireStripe();
   const customerId = await getOrCreateStripeCustomer(email);
@@ -98,10 +129,12 @@ const createSetupIntent = async (email: string): Promise<{
       setupIntentId: string;
       clientSecret: string | null;
       publishableKey?: string;
+      testHelperEnabled?: boolean;
     } = {
       customerId,
       setupIntentId: setupIntent.id,
       clientSecret: setupIntent.client_secret,
+      testHelperEnabled: config.NODE_ENV !== 'production' && isStripeTestMode(),
     };
 
     if (config.stripe.publishableKey) {
@@ -248,8 +281,28 @@ const getDefaultPaymentMethodSummary = async (email: string) => {
       expMonth: paymentMethod.card.exp_month,
       expYear: paymentMethod.card.exp_year,
     };
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof AppError) throw error;
+
+    const isMissing =
+      error?.code === 'resource_missing' ||
+      error?.raw?.code === 'resource_missing' ||
+      (typeof error?.message === 'string' &&
+        (error.message.toLowerCase().includes('no such payment_method') ||
+          error.message.toLowerCase().includes('no such customer')));
+
+    if (isMissing) {
+      const updateFields: any = {
+        $set: { hasDefaultPaymentMethod: false },
+        $unset: { defaultPaymentMethodId: 1 },
+      };
+      if (typeof error?.message === 'string' && error.message.toLowerCase().includes('no such customer')) {
+        updateFields.$unset.stripeCustomerId = 1;
+      }
+      await User.updateOne({ _id: user._id }, updateFields);
+      throw new AppError('No saved payment method was found for this account.', StatusCodes.NOT_FOUND);
+    }
+
     return toAppStripeError(error);
   }
 };
@@ -365,6 +418,14 @@ const processPaymentRetry = async (retryId: string): Promise<{
 
   if (retry.status !== 'pending') {
     throw new AppError(`Cannot process retry with status: ${retry.status}`, StatusCodes.BAD_REQUEST);
+  }
+
+  const auctionProduct = await AuctionProduct.findById(retry.auctionProductId);
+  if (!auctionProduct || auctionProduct.status === 'unsold') {
+    retry.status = 'failed';
+    retry.failureReason = 'Auction product is unsold';
+    await retry.save();
+    throw new AppError('Cannot retry payment: Auction product is unsold', StatusCodes.BAD_REQUEST);
   }
 
   const winner = await User.findById(retry.winnerId);

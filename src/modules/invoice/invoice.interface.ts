@@ -10,9 +10,12 @@ export interface IInvoice {
   inventoryId: string;
   amount: number;
   subtotal: number;
+  buyerPremiumRate?: number;
   buyerPremiumAmount: number;
   salesTaxAmount: number;
   taxableAmount: number;
+  creditCardFeeRate?: number;
+  creditCardFeeAmount?: number;
   totalAmount: number;
   stateTaxRate: number;
   stateTaxState?: string;

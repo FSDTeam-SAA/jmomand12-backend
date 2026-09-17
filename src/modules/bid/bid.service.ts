@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import AppError from '../../errors/AppError';
 import { User } from '../user/user.model';
 import AuctionProduct from '../AuctionProduct/AuctionProduct.model';
+import Product from '../product/product.model';
 import Invoice from '../invoice/invoice.model';
 import { PickupAppointment } from '../pickup/pickup.model';
 import Bid from './bid.model';
@@ -168,19 +169,26 @@ const addBid = async (email: string, payload: any) => {
 
   void invalidateCachePattern('cache:auction:*');
 
+  const baseProduct = await Product.findById(auctionProduct.productId).select('reservePrice');
+  const effectiveReservePrice =
+    auctionProduct.reservePrice != null && auctionProduct.reservePrice > 0
+      ? auctionProduct.reservePrice
+      : baseProduct?.reservePrice != null && baseProduct.reservePrice > 0
+        ? baseProduct.reservePrice
+        : 0;
+
   // System Auto-Counter Bidding Logic (Active ONLY in the last 1 hour of auction)
   if (
     auction.status === 'active' &&
     timeRemainingMs <= 60 * 60 * 1000 &&
-    auctionProduct.reservePrice != null &&
-    auctionProduct.reservePrice > 0 &&
-    amount < auctionProduct.reservePrice &&
+    effectiveReservePrice > 0 &&
+    amount < effectiveReservePrice &&
     !user.isSystemUser
   ) {
     const systemUser = await getOrCreateSystemUser();
 
     // Counter bid capped at reservePrice
-    const systemAmount = Math.min(amount + auctionProduct.bidIncrement, auctionProduct.reservePrice);
+    const systemAmount = Math.min(amount + auctionProduct.bidIncrement, effectiveReservePrice);
 
     const systemBid = await Bid.create({
       auctionId: auctionProduct.auctionId,

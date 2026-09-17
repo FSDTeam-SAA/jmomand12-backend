@@ -229,6 +229,15 @@ const processAuctionProduct = async (
 ): Promise<IAuctionProductProcessingResult> => {
   auctionProduct.closedAt = new Date();
 
+  // Resolve effective reserve price from auction lot or underlying product
+  const baseProduct = await Product.findById(auctionProduct.productId).select('reservePrice inventoryStatus');
+  const effectiveReservePrice =
+    auctionProduct.reservePrice != null && auctionProduct.reservePrice > 0
+      ? auctionProduct.reservePrice
+      : baseProduct?.reservePrice != null && baseProduct.reservePrice > 0
+        ? baseProduct.reservePrice
+        : 0;
+
   if (!auctionProduct.highestBid?.amount || auctionProduct.highestBid.amount <= 0) {
     return await markUnsold(auctionProduct, 'No bids received');
   }
@@ -240,7 +249,7 @@ const processAuctionProduct = async (
     }
   }
 
-  if (auctionProduct.reservePrice && auctionProduct.highestBid.amount < auctionProduct.reservePrice) {
+  if (effectiveReservePrice > 0 && auctionProduct.highestBid.amount < effectiveReservePrice) {
     return await markUnsold(auctionProduct, 'Reserve price not met');
   }
 
@@ -255,6 +264,8 @@ const markUnsold = async (
   reason: string,
 ): Promise<IAuctionProductProcessingResult> => {
   auctionProduct.status = 'unsold';
+  auctionProduct.winner = undefined;
+  auctionProduct.soldPrice = undefined;
   auctionProduct.paymentStatus = 'failed';
   auctionProduct.pickupStatus = 'pending';
   await auctionProduct.save();
@@ -317,6 +328,21 @@ const assignWinner = async (auctionProduct: HydratedDocument<IAuctionProduct>): 
     throw new AppError('Cannot assign winner because highest bidder is missing', 500);
   }
 
+  const baseProduct = await Product.findById(auctionProduct.productId).select('reservePrice');
+  const effectiveReservePrice =
+    auctionProduct.reservePrice != null && auctionProduct.reservePrice > 0
+      ? auctionProduct.reservePrice
+      : baseProduct?.reservePrice != null && baseProduct.reservePrice > 0
+        ? baseProduct.reservePrice
+        : 0;
+
+  if (
+    effectiveReservePrice > 0 &&
+    (!auctionProduct.highestBid?.amount || auctionProduct.highestBid.amount < effectiveReservePrice)
+  ) {
+    throw new AppError('Cannot assign winner: Reserve price not met', 400);
+  }
+
   auctionProduct.winner = auctionProduct.highestBid.bidder;
   auctionProduct.status = 'payment_pending';
   auctionProduct.paymentStatus = 'pending';
@@ -334,6 +360,10 @@ const assignWinner = async (auctionProduct: HydratedDocument<IAuctionProduct>): 
 const processPayment = async (
   auctionProduct: HydratedDocument<IAuctionProduct>,
 ): Promise<IAuctionProductProcessingResult> => {
+  if (auctionProduct.status === 'unsold') {
+    throw new AppError('Cannot process payment for an unsold auction product', 400);
+  }
+
   if (!auctionProduct.winner) {
     throw new AppError('Auction product winner is not assigned', 500);
   }
@@ -356,6 +386,20 @@ const processPayment = async (
     throw new AppError('Auction product base product not found', 404);
   }
 
+  const effectiveReservePrice =
+    auctionProduct.reservePrice != null && auctionProduct.reservePrice > 0
+      ? auctionProduct.reservePrice
+      : product.reservePrice != null && product.reservePrice > 0
+        ? product.reservePrice
+        : 0;
+
+  if (
+    effectiveReservePrice > 0 &&
+    (!auctionProduct.highestBid?.amount || auctionProduct.highestBid.amount < effectiveReservePrice)
+  ) {
+    throw new AppError('Cannot process payment: Reserve price not met', 400);
+  }
+
   const [auction, settings] = await Promise.all([
     Auction.findById(auctionProduct.auctionId).select(
       'title buyerPremiumEnabled buyerPremiumAmount',
@@ -369,7 +413,6 @@ const processPayment = async (
 
   const charges = calculateAuctionInvoiceCharges({
     winningBid: auctionProduct.highestBid.amount,
-    buyerPremiumEnabled: auction?.buyerPremiumEnabled,
     buyerPremiumAmount: auction?.buyerPremiumAmount,
     settings,
   });
@@ -388,6 +431,7 @@ const processPayment = async (
         subtotal: charges.subtotal.toString(),
         buyerPremiumAmount: charges.buyerPremiumAmount.toString(),
         salesTaxAmount: charges.salesTaxAmount.toString(),
+        creditCardFeeAmount: charges.creditCardFeeAmount.toString(),
         totalAmount: charges.totalAmount.toString(),
       },
     });
@@ -672,21 +716,28 @@ const processLastHourSystemBids = async (): Promise<{ counterBidsPlaced: number;
   const auctionProducts = await AuctionProduct.find({
     auctionId: { $in: auctionIds },
     status: 'active',
-    reservePrice: { $exists: true, $gt: 0 },
     'highestBid.amount': { $gt: 0 },
   });
 
   let counterBidsPlaced = 0;
 
   for (const ap of auctionProducts) {
-    if (!ap.reservePrice || ap.highestBid.amount >= ap.reservePrice) continue;
+    const baseProduct = await Product.findById(ap.productId).select('reservePrice');
+    const effectiveReservePrice =
+      ap.reservePrice != null && ap.reservePrice > 0
+        ? ap.reservePrice
+        : baseProduct?.reservePrice != null && baseProduct.reservePrice > 0
+          ? baseProduct.reservePrice
+          : 0;
+
+    if (effectiveReservePrice <= 0 || ap.highestBid.amount >= effectiveReservePrice) continue;
     if (!ap.highestBid.bidder) continue;
     if (ap.highestBid.bidder.toString() === systemUser._id.toString()) continue;
 
     const currentCustomerBidAmount = ap.highestBid.amount;
     const systemAmount = Math.min(
       currentCustomerBidAmount + ap.bidIncrement,
-      ap.reservePrice,
+      effectiveReservePrice,
     );
 
     const systemBid = await Bid.create({

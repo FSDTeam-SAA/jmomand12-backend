@@ -52,8 +52,9 @@ const sendWinnerInvoiceEmail = async (params: {
         <p><strong>Item:</strong> ${params.productTitle}</p>
         <p><strong>Inventory ID:</strong> ${params.inventoryId}</p>
         <p><strong>Winning Bid:</strong> $${params.charges.subtotal.toFixed(2)}</p>
-        <p><strong>Buyer Premium:</strong> $${params.charges.buyerPremiumAmount.toFixed(2)}</p>
-        <p><strong>State Tax:</strong> $${params.charges.salesTaxAmount.toFixed(2)}</p>
+        <p><strong>Buyer Premium (${params.charges.buyerPremiumRate ?? 15}%):</strong> $${params.charges.buyerPremiumAmount.toFixed(2)}</p>
+        <p><strong>${params.charges.stateTaxLabel || 'Virginia Sales Tax'} (${params.charges.stateTaxRate ?? 5.5}%):</strong> $${params.charges.salesTaxAmount.toFixed(2)}</p>
+        <p><strong>Credit Card Fee (${params.charges.creditCardFeeRate ?? 3.3}%):</strong> $${(params.charges.creditCardFeeAmount ?? 0).toFixed(2)}</p>
         <p><strong>Paid Amount:</strong> $${params.charges.totalAmount.toFixed(2)}</p>
         <p><strong>Pickup Code:</strong> ${params.pickupCode}</p>
         ${
@@ -87,11 +88,16 @@ const createPaidInvoice = async (params: {
   const pickupQrDataUrl = await createPickupQrDataUrl(pickupToken);
   const charges = params.charges ?? {
     subtotal: params.amount,
+    buyerPremiumRate: 15,
     buyerPremiumAmount: 0,
     salesTaxAmount: 0,
     taxableAmount: params.amount,
+    creditCardFeeRate: 3.3,
+    creditCardFeeAmount: 0,
     totalAmount: params.amount,
-    stateTaxRate: 0,
+    stateTaxRate: 5.5,
+    stateTaxState: 'VA',
+    stateTaxLabel: 'Virginia Sales Tax',
   };
 
   const invoice = await Invoice.create({
@@ -102,9 +108,12 @@ const createPaidInvoice = async (params: {
     inventoryId: params.inventoryId,
     amount: charges.totalAmount,
     subtotal: charges.subtotal,
+    buyerPremiumRate: charges.buyerPremiumRate,
     buyerPremiumAmount: charges.buyerPremiumAmount,
     salesTaxAmount: charges.salesTaxAmount,
     taxableAmount: charges.taxableAmount,
+    creditCardFeeRate: charges.creditCardFeeRate,
+    creditCardFeeAmount: charges.creditCardFeeAmount,
     totalAmount: charges.totalAmount,
     stateTaxRate: charges.stateTaxRate,
     stateTaxState: charges.stateTaxState,
@@ -143,11 +152,16 @@ const createFailedPaymentInvoice = async (params: {
   const pickupToken = crypto.randomBytes(32).toString('hex');
   const charges = params.charges ?? {
     subtotal: params.amount,
+    buyerPremiumRate: 15,
     buyerPremiumAmount: 0,
     salesTaxAmount: 0,
     taxableAmount: params.amount,
+    creditCardFeeRate: 3.3,
+    creditCardFeeAmount: 0,
     totalAmount: params.amount,
-    stateTaxRate: 0,
+    stateTaxRate: 5.5,
+    stateTaxState: 'VA',
+    stateTaxLabel: 'Virginia Sales Tax',
   };
 
   return Invoice.create({
@@ -158,9 +172,12 @@ const createFailedPaymentInvoice = async (params: {
     inventoryId: params.inventoryId,
     amount: charges.totalAmount,
     subtotal: charges.subtotal,
+    buyerPremiumRate: charges.buyerPremiumRate,
     buyerPremiumAmount: charges.buyerPremiumAmount,
     salesTaxAmount: charges.salesTaxAmount,
     taxableAmount: charges.taxableAmount,
+    creditCardFeeRate: charges.creditCardFeeRate,
+    creditCardFeeAmount: charges.creditCardFeeAmount,
     totalAmount: charges.totalAmount,
     stateTaxRate: charges.stateTaxRate,
     stateTaxState: charges.stateTaxState,
