@@ -18,7 +18,7 @@
     "@scalar/express-api-reference": "^0.10.12",
     "@socket.io/redis-adapter": "^8.3.0",
     "@types/qrcode": "^1.5.6",
-    "adm-zip": "^0.6.0",
+    "adm-zip": "^0.6.1",
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.80.8",
