@@ -828,6 +828,7 @@ const getInventoryProducts = async (query: Record<string, unknown>) => {
   if (searchTerm) {
     filter.$or = [
       { title: { $regex: searchTerm, $options: 'i' } },
+      { inventoryId: { $regex: searchTerm, $options: 'i' } },
       { category: { $regex: searchTerm, $options: 'i' } },
     ];
   }
@@ -894,6 +895,7 @@ const getAuctionProducts = async (query: Record<string, unknown> )=> {
   if (searchTerm) {
     filter.$or = [
       { title: { $regex: searchTerm, $options: 'i' } },
+      { inventoryId: { $regex: searchTerm, $options: 'i' } },
       { category: { $regex: searchTerm, $options: 'i' } },
     ];
   }

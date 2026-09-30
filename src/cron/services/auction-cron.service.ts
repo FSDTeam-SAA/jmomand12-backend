@@ -276,7 +276,7 @@ const markUnsold = async (
 
   await notifyAuctionProductBidders(auctionProduct, {
     type: 'auction_lost',
-    message: `Auction ended without a sale: ${reason}`,
+    message: 'Auction ended without a sale.',
   });
 
   logger.info(
