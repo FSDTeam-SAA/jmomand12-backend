@@ -19,7 +19,7 @@
     "@socket.io/redis-adapter": "^8.3.0",
     "@types/qrcode": "^1.5.6",
     "adm-zip": "^0.6.0",
-    "axios": "^1.12.2",
+    "axios": "^1.20.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.80.8",
     "cloudinary": "^2.7.0",
