@@ -7,7 +7,6 @@ import Auction from './auction.model';
 import { AuctionStatus, IAuction, IDayAvailability } from './auction.interface';
 import { generateAuctionId } from '../../utils/product.utils';
 import AuctionProduct from '../AuctionProduct/AuctionProduct.model';
-import { PUBLIC_USER_SELECT } from '../user/user.utils';
 import auctionCronService from '../../cron/services/auction-cron.service';
 import { createNotification } from '../../socket/notification.service';
 
@@ -34,20 +33,28 @@ const addAuctionProductMetadata = async (auctions: any[]) => {
   if (!auctions.length) return auctions;
 
   const auctionIds = auctions.map((auction) => auction._id);
-  const auctionProducts = await AuctionProduct.find({ auctionId: { $in: auctionIds } })
-    .populate('highestBid.bidder', PUBLIC_USER_SELECT)
-    .lean();
+  const auctionProducts = await AuctionProduct.find({ auctionId: { $in: auctionIds } }).lean();
 
   const auctionProductByAuctionAndProduct = new Map<string, any>();
   const auctionProductsByAuction = new Map<string, any[]>();
   for (const auctionProduct of auctionProducts) {
     const auctionId = String(auctionProduct.auctionId);
+    const publicAuctionProduct = {
+      ...auctionProduct,
+      highestBid: {
+        amount: auctionProduct.highestBid?.amount ?? 0,
+        placedAt: auctionProduct.highestBid?.placedAt ?? null,
+      },
+      winner: null,
+      paymentStatus: undefined,
+      pickupStatus: undefined,
+    };
     auctionProductByAuctionAndProduct.set(
       `${auctionId}:${auctionProduct.productId}`,
-      auctionProduct,
+      publicAuctionProduct,
     );
     const existingAuctionProducts = auctionProductsByAuction.get(auctionId) ?? [];
-    existingAuctionProducts.push(auctionProduct);
+    existingAuctionProducts.push(publicAuctionProduct);
     auctionProductsByAuction.set(auctionId, existingAuctionProducts);
   }
 
@@ -57,6 +64,7 @@ const addAuctionProductMetadata = async (auctions: any[]) => {
 
     return {
       ...auctionObject,
+      winner: null,
       products: products.map((product: any) => {
         const productObject = toPlainObject(product);
         const auctionProduct = auctionProductByAuctionAndProduct.get(
@@ -249,7 +257,6 @@ const getActiveAuctions = async (query: Record<string, unknown>) => {
       const [auctions, total] = await Promise.all([
         Auction.find({ status: 'active' })
           .populate('products')
-          .populate('winner', 'firstName lastName email')
           .sort({ startsAt: 1 })
           .skip(skip)
           .limit(limitNumber),
@@ -322,7 +329,6 @@ const getAllAuctions = async (query: Record<string, unknown>) => {
   const [auctions, total] = await Promise.all([
     Auction.find(filter)
       .populate('products')
-      .populate('winner', 'firstName lastName email')
       .sort(sort)
       .skip(skip)
       .limit(limitNumber),
@@ -349,9 +355,7 @@ const getAuctionDetails = async (id: string) => {
   return getOrFetchWithCache(
     cacheKey,
     async () => {
-      const auction = await Auction.findById(id)
-        .populate('products')
-        .populate('winner', 'firstName lastName email profileImage');
+      const auction = await Auction.findById(id).populate('products');
 
       if (!auction) {
         throw new AppError('Auction not found', StatusCodes.NOT_FOUND);
@@ -381,7 +385,6 @@ const getUpcomingAuctions = async (query: Record<string, unknown>) => {
       const [auctions, total] = await Promise.all([
         Auction.find(filter)
           .populate('products')
-          .populate('winner', 'firstName lastName email')
           .sort({ startsAt: 1 })
           .skip(skip)
           .limit(limitNumber),
@@ -430,7 +433,6 @@ const getClosingSoonAuctions = async (query: Record<string, unknown>) => {
       const [auctions, total] = await Promise.all([
         Auction.find(filter)
           .populate('products')
-          .populate('winner', 'firstName lastName email')
           .sort({ endsAt: 1 })
           .skip(skip)
           .limit(limitNumber),
@@ -479,7 +481,6 @@ const getClosedAuctions = async (query: Record<string, unknown>) => {
       const [auctions, total] = await Promise.all([
         Auction.find(filter)
           .populate('products')
-          .populate('winner', 'firstName lastName email')
           .sort({ endsAt: -1 })
           .skip(skip)
           .limit(limitNumber),
@@ -629,12 +630,24 @@ const getAuctionsByDay = async (dayName?: string) => {
     const auctionsWithProducts = await Promise.all(
       matchingAuctions.map(async (auction) => {
         const products = await AuctionProduct.find({ auctionId: auction._id })
-          .populate('productId')
-          .populate('highestBid.bidder', PUBLIC_USER_SELECT);
+          .populate('productId');
 
         return {
           ...auction.toObject(),
-          products,
+          winner: null,
+          products: products.map((product) => {
+            const item = product.toObject();
+            return {
+              ...item,
+              highestBid: {
+                amount: item.highestBid?.amount ?? 0,
+                placedAt: item.highestBid?.placedAt ?? null,
+              },
+              winner: null,
+              paymentStatus: undefined,
+              pickupStatus: undefined,
+            };
+          }),
         };
       }),
     );

@@ -123,7 +123,7 @@ const addBid = async (email: string, payload: any) => {
   );
 
   if (!acceptedAuctionProduct) {
-    await Bid.findByIdAndUpdate(bid._id, { isWinningBid: false });
+    await Bid.findByIdAndUpdate(bid._id, { isWinningBid: false, isAccepted: false });
     throw new AppError(
       'Minimum bid amount has changed. Please refresh and bid again.',
       StatusCodes.CONFLICT,
@@ -150,7 +150,6 @@ const addBid = async (email: string, payload: any) => {
     previousBidderId: previousHighestBid.bidder?.toString(),
     newBidderId: user._id.toString(),
     previousBidAmount: previousHighestBid.amount ?? 0,
-    newBidderName: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || 'Bidder',
     newBidAmount: amount,
     bidId: bid._id.toString(),
   });
@@ -159,8 +158,6 @@ const addBid = async (email: string, payload: any) => {
     auctionId: auctionProduct.auctionId.toString(),
     auctionProductId: auctionProduct._id.toString(),
     productId: auctionProduct.productId.toString(),
-    bidId: bid._id.toString(),
-    bidderId: user._id.toString(),
     amount,
     minimumNextBid: amount + auctionProduct.bidIncrement,
     endsAt: auction.endsAt,
@@ -225,12 +222,9 @@ const addBid = async (email: string, payload: any) => {
       auctionId: auctionProduct.auctionId.toString(),
       auctionProductId: auctionProduct._id.toString(),
       productId: auctionProduct.productId.toString(),
-      bidId: systemBid._id.toString(),
-      bidderId: systemUser._id.toString(),
       amount: systemAmount,
       minimumNextBid: systemAmount + auctionProduct.bidIncrement,
       endsAt: auction.endsAt,
-      isSystemBid: true,
       placedAt: new Date(),
     });
   }

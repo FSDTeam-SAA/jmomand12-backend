@@ -1,18 +1,30 @@
 import { Types } from 'mongoose';
 import { StatusCodes } from 'http-status-codes';
 import AuctionProduct from './AuctionProduct.model';
+import Bid from '../bid/bid.model';
 import AppError from '../../errors/AppError';
-import { DETAILED_PUBLIC_USER_SELECT, PUBLIC_USER_SELECT, toPublicUser } from '../user/user.utils';
+
+const toPublicAuctionProduct = (auctionProduct: any) => {
+  const item = auctionProduct.toObject();
+  const { paymentStatus, pickupStatus, ...publicItem } = item;
+  void paymentStatus;
+  void pickupStatus;
+  return {
+    ...publicItem,
+    highestBid: {
+      amount: item.highestBid?.amount ?? 0,
+      placedAt: item.highestBid?.placedAt ?? null,
+    },
+    winner: undefined,
+  };
+};
 
 const getProductsByAuctionId = async (auctionId: string) => {
   const result = await AuctionProduct.find({
     auctionId: new Types.ObjectId(auctionId),
-  })
-    .populate('productId')
-    .populate('highestBid.bidder', PUBLIC_USER_SELECT)
-    .populate('winner', PUBLIC_USER_SELECT);
+  }).populate('productId');
 
-  return result;
+  return result.map(toPublicAuctionProduct);
 };
 
 const getSingleAuctionProduct = async (auctionProductId: string) => {
@@ -23,17 +35,11 @@ const getSingleAuctionProduct = async (auctionProductId: string) => {
   const auctionProduct =
     (await AuctionProduct.findById(auctionProductId)
       .populate('productId')
-      .populate('auctionId', 'auctionId title description startsAt endsAt status')
-      .populate('highestBid.bidder', DETAILED_PUBLIC_USER_SELECT)
-      .populate('highestBid.bid')
-      .populate('winner', DETAILED_PUBLIC_USER_SELECT)) ||
+      .populate('auctionId', 'auctionId title description startsAt endsAt status')) ||
     (await AuctionProduct.findOne({ productId: new Types.ObjectId(auctionProductId) })
       .sort({ createdAt: -1 })
       .populate('productId')
-      .populate('auctionId', 'auctionId title description startsAt endsAt status')
-      .populate('highestBid.bidder', DETAILED_PUBLIC_USER_SELECT)
-      .populate('highestBid.bid')
-      .populate('winner', DETAILED_PUBLIC_USER_SELECT));
+      .populate('auctionId', 'auctionId title description startsAt endsAt status'));
 
   if (!auctionProduct) {
     throw new AppError('Auction product not found', StatusCodes.NOT_FOUND);
@@ -41,12 +47,32 @@ const getSingleAuctionProduct = async (auctionProductId: string) => {
 
   const product = auctionProduct.productId as any;
   const auction = auctionProduct.auctionId as any;
-  const highestBidBidder = auctionProduct.highestBid?.bidder as any;
-  const winner = auctionProduct.winner as any;
-  const highestBid = auctionProduct.highestBid as any;
   const currentBid = auctionProduct.highestBid?.amount ?? 0;
   const minimumNextBid =
     currentBid > 0 ? currentBid + auctionProduct.bidIncrement : auctionProduct.startingBid;
+
+  const bids = await Bid.find({
+    auctionProductId: auctionProduct._id,
+    isAccepted: { $ne: false },
+    amount: { $lte: currentBid },
+  })
+    .select('bidderId amount createdAt isSystemBid')
+    .sort({ amount: -1, createdAt: -1 })
+    .lean();
+  const seenBidders = new Set<string>();
+  const topBids = bids.filter((bid) => {
+    const bidderId = String(bid.bidderId);
+    if (seenBidders.has(bidderId)) return false;
+    seenBidders.add(bidderId);
+    return true;
+  });
+  const bidHistory = topBids.map((bid) => ({
+    amount: bid.amount,
+    placedAt: bid.createdAt,
+  }));
+  const customerBids = bids.filter((bid) => !bid.isSystemBid);
+  const totalBidders = new Set(customerBids.map((bid) => String(bid.bidderId))).size;
+  const totalBids = customerBids.length;
 
   return {
     auctionProductId: auctionProduct._id,
@@ -58,14 +84,12 @@ const getSingleAuctionProduct = async (auctionProductId: string) => {
     highestBid: {
       amount: currentBid,
       placedAt: auctionProduct.highestBid?.placedAt ?? null,
-      bidder: toPublicUser(highestBidBidder),
-      bid: highestBid?.bid ?? null,
     },
+    bidHistory,
+    totalBidders,
+    totalBids,
     minimumNextBid,
-    winner: toPublicUser(winner),
     closedAt: auctionProduct.closedAt ?? null,
-    paymentStatus: auctionProduct.paymentStatus,
-    pickupStatus: auctionProduct.pickupStatus,
     auction: auction
       ? {
           _id: auction._id,
@@ -107,7 +131,19 @@ const getAllActiveAuction = async () => {
     .populate('productId')
     .populate('auctionId', 'auctionId startsAt endsAt');
 
-  return result;
+  return result.map((auctionProduct) => {
+    const item = auctionProduct.toObject();
+    return {
+      ...item,
+      highestBid: {
+        amount: item.highestBid?.amount ?? 0,
+        placedAt: item.highestBid?.placedAt ?? null,
+      },
+      winner: undefined,
+      paymentStatus: undefined,
+      pickupStatus: undefined,
+    };
+  });
 };
 
 const auctionProductService = {

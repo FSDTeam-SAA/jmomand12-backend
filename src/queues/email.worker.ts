@@ -2,6 +2,8 @@ import { Job, Worker } from 'bullmq';
 import logger from '../logger';
 import sendEmail from '../utils/sendEmail';
 import outbidEmailTemplate from '../utils/outbidEmailTemplate';
+import AuctionProduct from '../modules/AuctionProduct/AuctionProduct.model';
+import Auction from '../modules/auction/auction.model';
 import winnerEmailTemplate from '../utils/winnerEmailTemplate';
 import {
   EMAIL_QUEUE_NAME,
@@ -19,10 +21,25 @@ let emailWorker: Worker<EmailJobData> | null = null;
 const processEmailJob = async (job: Job<EmailJobData>) => {
   if (job.name === OUTBID_EMAIL_JOB) {
     const data = job.data as OutbidEmailJobData;
+    const auctionProduct = await AuctionProduct.findById(data.auctionProductId)
+      .select('status auctionId')
+      .lean();
+    const auction = auctionProduct?.status === 'active'
+      ? await Auction.findById(auctionProduct.auctionId).select('endsAt').lean()
+      : null;
+    const outcome = auctionProduct?.status === 'sold'
+      ? 'sold'
+      : auctionProduct?.status === 'unsold'
+        ? 'closed'
+        : auctionProduct?.status === 'active' && auction && auction.endsAt > new Date()
+          ? 'active'
+          : 'pending';
     const result = await sendEmail({
       to: data.previousBidderEmail,
-      subject: `You have been outbid on ${data.productTitle}`,
-      html: outbidEmailTemplate(data),
+      subject: outcome === 'active'
+        ? `You have been outbid on ${data.productTitle}`
+        : `Auction update for ${data.productTitle}`,
+      html: outbidEmailTemplate(data, outcome),
     });
 
     if (!result.success) {

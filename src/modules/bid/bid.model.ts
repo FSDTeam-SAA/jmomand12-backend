@@ -42,6 +42,11 @@ const bidSchema = new Schema<IBid>(
       default: false,
     },
 
+    isAccepted: {
+      type: Boolean,
+      default: true,
+    },
+
     isSystemBid: {
       type: Boolean,
       default: false,

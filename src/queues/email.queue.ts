@@ -14,7 +14,6 @@ export interface OutbidEmailJobData {
   previousBidderEmail: string;
   previousBidderName: string;
   previousBidAmount: number;
-  newBidderName: string;
   newBidAmount: number;
   bidId: string;
   frontendUrl: string;

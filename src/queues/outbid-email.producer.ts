@@ -10,7 +10,6 @@ interface EnqueueOutbidEmailParams {
   previousBidderId?: string;
   newBidderId: string;
   previousBidAmount: number;
-  newBidderName: string;
   newBidAmount: number;
   bidId: string;
 }
@@ -24,7 +23,6 @@ export const enqueueOutbidEmailNotification = async ({
   previousBidderId,
   newBidderId,
   previousBidAmount,
-  newBidderName,
   newBidAmount,
   bidId,
 }: EnqueueOutbidEmailParams) => {
@@ -60,7 +58,6 @@ export const enqueueOutbidEmailNotification = async ({
         previousBidderEmail: previousBidder.email,
         previousBidderName: getUserDisplayName(previousBidder),
         previousBidAmount,
-        newBidderName,
         newBidAmount,
         bidId,
         frontendUrl: config.app.frontendUrl,

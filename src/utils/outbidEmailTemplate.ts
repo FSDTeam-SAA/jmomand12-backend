@@ -15,17 +15,34 @@ const formatCurrency = (amount: number) =>
     currency: 'USD',
   }).format(amount);
 
-const outbidEmailTemplate = (data: OutbidEmailJobData): string => {
+export type OutbidEmailOutcome = 'active' | 'sold' | 'closed' | 'pending';
+
+const outbidEmailTemplate = (data: OutbidEmailJobData, outcome: OutbidEmailOutcome): string => {
   const frontendUrl = data.frontendUrl.replace(/\/$/, '');
   const productUrl = `${frontendUrl}/auction-details/${data.auctionProductId}`;
   const bidderName = escapeHtml(data.previousBidderName);
-  const newBidderName = escapeHtml(data.newBidderName);
   const productTitle = escapeHtml(data.productTitle);
   const escapedProductUrl = escapeHtml(productUrl);
   const previousBid = formatCurrency(data.previousBidAmount);
   const newBid = formatCurrency(data.newBidAmount);
   const bidDifference = formatCurrency(data.newBidAmount - data.previousBidAmount);
   const currentYear = new Date().getFullYear();
+  const isActive = outcome === 'active';
+  const headline = isActive ? 'You have been outbid' : 'Auction update';
+  const summary = isActive
+    ? 'Another bidder placed a higher bid on your auction item.'
+    : outcome === 'sold'
+      ? 'This item has been won by a higher bidder.'
+      : outcome === 'closed'
+        ? 'This auction closed without a sale.'
+        : 'This auction has ended. The final sale result is pending.';
+  const message = isActive
+    ? `Another bidder placed a higher bid on <strong style="color: #172033;">${productTitle}</strong>. You can return to the auction and place a new bid while it is still active.`
+    : outcome === 'sold'
+      ? `Best of luck with your next bid. <strong style="color: #172033;">${productTitle}</strong> has been won by a higher bidder.`
+      : outcome === 'closed'
+        ? `The auction for <strong style="color: #172033;">${productTitle}</strong> has closed without a sale.`
+        : `The auction for <strong style="color: #172033;">${productTitle}</strong> has ended. The final sale result is pending.`;
 
   return `
     <!doctype html>
@@ -34,7 +51,7 @@ const outbidEmailTemplate = (data: OutbidEmailJobData): string => {
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="x-apple-disable-message-reformatting" />
-        <title>You have been outbid</title>
+        <title>${headline}</title>
         <style>
           @media only screen and (max-width: 620px) {
             .email-shell { padding: 18px 12px !important; }
@@ -51,7 +68,7 @@ const outbidEmailTemplate = (data: OutbidEmailJobData): string => {
       </head>
       <body style="margin: 0; padding: 0; background-color: #eef2f7; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; color: #172033;">
         <div style="display: none; max-height: 0; overflow: hidden; opacity: 0; color: transparent;">
-          Another bidder placed a higher bid on ${productTitle}. Return to the auction to bid again.
+          ${summary}
         </div>
 
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #eef2f7; border-collapse: collapse;">
@@ -64,10 +81,10 @@ const outbidEmailTemplate = (data: OutbidEmailJobData): string => {
                       ${companyName}
                     </p>
                     <h1 class="email-title" style="margin: 0; color: #ffffff; font-size: 30px; line-height: 38px; font-weight: 800;">
-                      You have been outbid
+                      ${headline}
                     </h1>
                     <p style="margin: 12px 0 0; color: #d9e2ef; font-size: 15px; line-height: 24px;">
-                      A new highest bid was placed on your auction item.
+                      ${summary}
                     </p>
                   </td>
                 </tr>
@@ -78,8 +95,7 @@ const outbidEmailTemplate = (data: OutbidEmailJobData): string => {
                       Hello ${bidderName},
                     </p>
                     <p style="margin: 0 0 24px; color: #46546a; font-size: 15px; line-height: 25px;">
-                      ${newBidderName} placed a higher bid on <strong style="color: #172033;">${productTitle}</strong>.
-                      You can return to the auction and place a new bid while it is still active.
+                      ${message}
                     </p>
 
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" class="bid-grid" style="border-collapse: collapse; margin: 0 0 20px;">
@@ -92,7 +108,7 @@ const outbidEmailTemplate = (data: OutbidEmailJobData): string => {
                         </td>
                         <td class="bid-cell" width="50%" style="padding: 0 0 0 6px;">
                           <div style="border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; background-color: #eff6ff;">
-                            <p style="margin: 0 0 6px; color: #1d4ed8; font-size: 13px; font-weight: 700;">New highest bid</p>
+                            <p style="margin: 0 0 6px; color: #1d4ed8; font-size: 13px; font-weight: 700;">Higher bid</p>
                             <p style="margin: 0; color: #123c7c; font-size: 24px; line-height: 30px; font-weight: 800;">${newBid}</p>
                           </div>
                         </td>
@@ -109,7 +125,7 @@ const outbidEmailTemplate = (data: OutbidEmailJobData): string => {
                       <tr>
                         <td style="background-color: #2563eb; border-radius: 10px;">
                           <a href="${escapedProductUrl}" class="cta-button" style="display: inline-block; padding: 14px 22px; color: #ffffff; font-size: 15px; font-weight: 800; text-decoration: none;">
-                            View auction and bid again
+                            ${isActive ? 'View auction and bid again' : 'View auction result'}
                           </a>
                         </td>
                       </tr>

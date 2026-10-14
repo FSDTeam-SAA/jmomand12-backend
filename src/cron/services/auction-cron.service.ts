@@ -773,12 +773,9 @@ const processLastHourSystemBids = async (): Promise<{ counterBidsPlaced: number;
       auctionId: ap.auctionId.toString(),
       auctionProductId: ap._id.toString(),
       productId: ap.productId.toString(),
-      bidId: systemBid._id.toString(),
-      bidderId: systemUser._id.toString(),
       amount: systemAmount,
       minimumNextBid: systemAmount + ap.bidIncrement,
       endsAt: parentAuction?.endsAt,
-      isSystemBid: true,
       placedAt: new Date(),
     });
 
