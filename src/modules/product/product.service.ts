@@ -62,7 +62,7 @@ const validateRetailPrice = (
   price: unknown,
   retailPrice: unknown,
 ) => {
-  if (type !== 'for_sale' || retailPrice == null) return;
+  if (retailPrice == null) return;
 
   const numericRetailPrice = Number(retailPrice);
   const numericPrice = Number(price);
@@ -71,7 +71,7 @@ const validateRetailPrice = (
     throw new AppError('Retail price must be a positive number', StatusCodes.BAD_REQUEST);
   }
 
-  if (Number.isFinite(numericPrice) && numericRetailPrice < numericPrice) {
+  if (type === 'for_sale' && Number.isFinite(numericPrice) && numericRetailPrice < numericPrice) {
     throw new AppError(
       'Retail price must be greater than or equal to price',
       StatusCodes.BAD_REQUEST,
@@ -112,9 +112,9 @@ const createProduct = async (
     if (payload.quantity == null || payload.quantity <= 0) {
       throw new AppError('Quantity is required', StatusCodes.BAD_REQUEST);
     }
-
-    validateRetailPrice(payload.type, payload.price, payload.retailPrice);
   }
+
+  validateRetailPrice(payload.type, payload.price, payload.retailPrice);
 
   // Upload Product Images
   const uploadedImages = await Promise.all(
@@ -187,6 +187,10 @@ const validateBulkProductRow = (
     if (row.quantity == null || Number(row.quantity) <= 0) {
       return 'Quantity is required for sale products';
     }
+  }
+
+  if (row.retailPrice != null && (!Number.isFinite(Number(row.retailPrice)) || Number(row.retailPrice) <= 0)) {
+    return 'Retail price must be a positive number';
   }
 
   return null;
@@ -359,6 +363,8 @@ const bulkUploadProducts = async (
           document.price = Number(row.price);
           document.quantity = Number(row.quantity);
         }
+
+        if (row.retailPrice != null) document.retailPrice = Number(row.retailPrice);
 
         insertCandidates.push({
           row: rowId,
@@ -1120,6 +1126,30 @@ const browseProducts = async (query: Record<string, unknown>) => {
 
   const total = await Product.countDocuments(filter);
 
+  const auctionProductIds = products
+    .filter((product) => product.type === 'for_auction')
+    .map((product) => product._id);
+  const auctionLots = auctionProductIds.length
+    ? await AuctionProduct.find({
+        productId: { $in: auctionProductIds },
+        status: { $in: ['active', 'upcoming'] },
+      })
+        .sort({ createdAt: -1 })
+        .lean()
+    : [];
+  const bidByProduct = new Map<string, number>();
+  for (const lot of auctionLots) {
+    const productId = String(lot.productId);
+    if (!bidByProduct.has(productId)) {
+      bidByProduct.set(
+        productId,
+        lot.highestBid?.amount && lot.highestBid.amount > 0
+          ? lot.highestBid.amount
+          : lot.startingBid,
+      );
+    }
+  }
+
   return {
     meta: {
       page: pageNumber,
@@ -1127,7 +1157,10 @@ const browseProducts = async (query: Record<string, unknown>) => {
       total,
       totalPage: Math.ceil(total / limitNumber),
     },
-    data: products,
+    data: products.map((product) => ({
+      ...product.toObject(),
+      currentBid: bidByProduct.get(String(product._id)),
+    })),
   };
 };
 

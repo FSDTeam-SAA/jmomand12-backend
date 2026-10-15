@@ -111,6 +111,7 @@ const getSingleAuctionProduct = async (auctionProductId: string) => {
           condition: product.condition,
           day: product.day,
           reservePrice: product.reservePrice,
+          retailPrice: product.retailPrice,
           inventoryStatus: product.inventoryStatus,
           images: product.images,
           totalReview: product.totalReview,
