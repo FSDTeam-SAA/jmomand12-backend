@@ -218,6 +218,7 @@ const openApiDocumentBase = {
             email: 'customer@example.com',
             phone: '+15555555555',
             password: 'secret123',
+            acceptedTerms: true,
             street: '123 Main St',
             location: 'Virginia',
             postalCode: '22030',

@@ -77,6 +77,9 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
+    termsAcceptedAt: {
+      type: Date,
+    },
     otp: { type: String, default: null },
     otpExpires: { type: Date, default: null },
     resetPasswordOtp: { type: String, default: null },

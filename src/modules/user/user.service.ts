@@ -9,7 +9,7 @@ import { IUser } from './user.interface';
 import { User } from './user.model';
 import { buildUserResponseRegister, generateOtp, generateTokens } from '../../lib/helper';
 
-const registerUser = async (payload: IUser) => {
+const registerUser = async (payload: IUser & { acceptedTerms: true }) => {
   const existingUser = await User.isUserExistByEmail(payload.email);
   if (existingUser && existingUser.isVerified) {
     throw new AppError('User already exists', StatusCodes.CONFLICT);
@@ -28,13 +28,14 @@ const registerUser = async (payload: IUser) => {
   if (existingUser && !existingUser.isVerified) {
     result = (await User.findOneAndUpdate(
       { email: existingUser.email },
-      { otp: hashedOtp, otpExpires },
+      { otp: hashedOtp, otpExpires, termsAcceptedAt: new Date() },
       { new: true },
     )) as IUser;
   } else {
     // Case 3: new user
     result = await User.create({
       ...payload,
+      termsAcceptedAt: new Date(),
       otp: hashedOtp,
       otpExpires,
       isVerified: false,

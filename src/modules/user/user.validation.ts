@@ -14,6 +14,9 @@ const userValidationSchema = z.object({
     password: z.string({
       required_error: "Password is required",
     }),
+    acceptedTerms: z.literal(true, {
+      errorMap: () => ({ message: "You must agree to the terms and conditions" }),
+    }),
   }),
 });
 

@@ -18,6 +18,7 @@ export interface IUser {
     url: string;
   };
   isVerified: boolean;
+  termsAcceptedAt?: Date;
   otp?: string | null;
   isSuspend: boolean;
   isBlocked: boolean;
