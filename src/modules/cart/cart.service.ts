@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
 import AppError from '../../errors/AppError';
+import AuctionProduct from '../AuctionProduct/AuctionProduct.model';
 import Product from '../product/product.model';
 import { User } from '../user/user.model';
 import { ICart } from './cart.interface';
@@ -14,21 +15,30 @@ const addToCartOrWishlist = async (email: string, payload: ICart) => {
     throw new AppError('User not found', StatusCodes.NOT_FOUND);
   }
 
-  // Find product
-  const product = await Product.findById(productId);
+  // Find product - support both Product ID and AuctionProduct ID
+  let targetProductId = productId;
+  let product = await Product.findById(targetProductId);
+  if (!product) {
+    const auctionProduct = await AuctionProduct.findById(productId);
+    if (auctionProduct?.productId) {
+      targetProductId = auctionProduct.productId as any;
+      product = await Product.findById(targetProductId);
+    }
+  }
+
   if (!product) {
     throw new AppError('Product not found', StatusCodes.NOT_FOUND);
   }
 
-  if (product.type !== 'for_sale') {
-    throw new AppError(
-      'Only for sale products can be added to cart or wishlist',
-      StatusCodes.BAD_REQUEST,
-    );
-  }
-
   // Stock validation (only for cart)
   if (type === 'cart') {
+    if (product.type !== 'for_sale') {
+      throw new AppError(
+        'Only for sale products can be added to cart',
+        StatusCodes.BAD_REQUEST,
+      );
+    }
+
     if (!product.quantity || product.quantity <= 0) {
       throw new AppError('Product is out of stock', StatusCodes.BAD_REQUEST);
     }
@@ -44,7 +54,7 @@ const addToCartOrWishlist = async (email: string, payload: ICart) => {
   // Check existing cart/wishlist item
   const existingItem = await Cart.findOne({
     userId: user._id,
-    productId,
+    productId: targetProductId,
     type,
   });
 
@@ -71,7 +81,7 @@ const addToCartOrWishlist = async (email: string, payload: ICart) => {
   // Create new cart/wishlist item
   const newItem = await Cart.create({
     userId: user._id,
-    productId,
+    productId: targetProductId,
     type,
     ...(type === 'cart' && { quantity }),
   });
@@ -110,16 +120,32 @@ const removeCartOrWishlistItem = async (email: string, cartItemId: string) => {
     throw new AppError('User not found', StatusCodes.NOT_FOUND);
   }
 
-  const item = await Cart.findOne({
+  // Attempt to find by cart item _id first
+  let item = await Cart.findOne({
     _id: cartItemId,
     userId: user._id,
   });
+
+  // If not found, check if cartItemId is actually a productId or auctionProductId
+  if (!item) {
+    let targetProductId = cartItemId;
+    const auctionProduct = await AuctionProduct.findById(cartItemId);
+    if (auctionProduct?.productId) {
+      targetProductId = auctionProduct.productId.toString();
+    }
+
+    item = await Cart.findOne({
+      userId: user._id,
+      productId: targetProductId,
+      type: 'wishlist',
+    });
+  }
 
   if (!item) {
     throw new AppError('Item not found', StatusCodes.NOT_FOUND);
   }
 
-  await Cart.findByIdAndDelete(cartItemId);
+  await Cart.findByIdAndDelete(item._id);
 
   return null;
 };
