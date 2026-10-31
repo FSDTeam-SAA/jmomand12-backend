@@ -42,10 +42,6 @@ build/
 .eslintcache
 
 # dotenv environment variables file
-.env
-.env.test
-.env.production
-.env.local
 .env.*.local
 
 # parcel-bundler cache (https://parceljs.org/)
@@ -63,7 +59,6 @@ Thumbs.db
 
 # IDEs and Editors
 .idea/
-.vscode/
 *.swp
 *.swo
 
@@ -74,3 +69,4 @@ scripts/fix-invoice-ids.ts
 test-*.ts
 test-*.js
 gstack_skill_cheatsheet.md
+config.bat
